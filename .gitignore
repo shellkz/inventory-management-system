@@ -1,0 +1,13 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+
+# 獨立 repo,巢狀在這裡純粹是本機工作目錄方便,兩邊 git 歷史互不干擾
+vision-service/
+
+# 模型權重(從 vision-service 的 Release 下載來的,不是這個 repo 的原始碼)
+models/
+
+# 執行期資料(vision-service 的 SQLite/samples/scans,見 vision-service 自己的 .gitignore 同樣邏輯)
+data/

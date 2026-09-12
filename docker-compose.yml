@@ -1,0 +1,20 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      - VISION_SERVICE_URL=${VISION_SERVICE_URL}
+      - VISION_API_KEY=${VISION_API_KEY}
+    depends_on:
+      - vision-service
+
+  vision-service:
+    build: ./vision-service
+    environment:
+      - FASTSAM_ONNX_PATH=${FASTSAM_ONNX_PATH}
+      - DINOV2_ONNX_PATH=${DINOV2_ONNX_PATH}
+      - VISION_API_KEY=${VISION_API_KEY}
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
