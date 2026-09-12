@@ -3,9 +3,12 @@
 <head>
   <meta charset="utf-8">
   <title>Inventory Manager</title>
+  <script src="{{ url_for('static', filename='htmx.min.js') }}"></script>
 </head>
 <body>
   <h1>Inventory Manager</h1>
-  <p>Backend 容器啟動成功。</p>
+
+  <button hx-get="/catalog" hx-target="#result">抓取目前登錄物品</button>
+  <div id="result"></div>
 </body>
 </html>
