@@ -1,0 +1,7 @@
+<ul>
+  {% for entity in entities %}
+  <li>{{ entity.name }}（{{ entity.instance_count }} 個變體）</li>
+  {% else %}
+  <li>目前沒有任何登錄物品</li>
+  {% endfor %}
+</ul>

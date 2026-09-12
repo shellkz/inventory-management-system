@@ -7,6 +7,8 @@
 </head>
 <body>
   <h1>Inventory Manager</h1>
-  <p>Backend 容器啟動成功。</p>
+
+  <button hx-get="/catalog" hx-target="#result">抓取目前登錄物品</button>
+  <div id="result"></div>
 </body>
 </html>
