@@ -2,11 +2,21 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Inventory Manager{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <script src="{{ url_for('static', filename='htmx.min.js') }}"></script>
 </head>
 <body>
-  {% block content %}{% endblock %}
+  <header class="app-header">
+    <a class="app-title" href="/">Inventory Manager</a>
+    <nav class="app-nav">
+      <a href="/items">物品</a>
+      <a href="/recognize">辨識測試</a>
+    </nav>
+  </header>
+  <main class="page">
+    {% block content %}{% endblock %}
+  </main>
 </body>
 </html>

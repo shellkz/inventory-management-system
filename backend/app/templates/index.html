@@ -1,10 +1,16 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <h1>Inventory Manager</h1>
+  <h1>總覽</h1>
 
-  <nav>
-    <a href="/items">物品</a>
-    <a href="/recognize">辨識測試</a>
-  </nav>
+  <div class="card-grid">
+    <a class="card" href="/items">
+      <h2>物品</h2>
+      <p>查看庫存、新增品項</p>
+    </a>
+    <a class="card" href="/recognize">
+      <h2>辨識測試</h2>
+      <p>拍照測試目前的辨識能力</p>
+    </a>
+  </div>
 {% endblock %}

@@ -3,20 +3,25 @@
 {% block title %}物品{% endblock %}
 
 {% block content %}
-  <h1>物品</h1>
+  <div class="page-toolbar">
+    <h1>物品</h1>
+    <a class="btn btn-primary" href="/items/add">新增物品</a>
+  </div>
 
-  <nav>
-    <a href="/items/add">新增物品</a>
-  </nav>
-
-  <ul>
+  <ul class="item-list">
     {% for item in items %}
-    <li{% if item.is_low %} class="low-stock"{% endif %}>
-      {{ item.name }}{% if item.category %}({{ item.category }}){% endif %}
-      — 數量: {{ item.quantity }}{% if item.is_low %} ⚠ 低於庫存下限({{ item.min_stock }}){% endif %}
+    <li class="item-row{% if item.is_low %} item-row--low{% endif %}">
+      <div class="item-row__main">
+        <span class="item-row__name">{{ item.name }}</span>
+        {% if item.category %}<span class="badge">{{ item.category }}</span>{% endif %}
+      </div>
+      <div class="item-row__meta">
+        數量 {{ item.quantity }}
+        {% if item.is_low %}<span class="badge badge--warning">⚠ 低於下限 {{ item.min_stock }}</span>{% endif %}
+      </div>
     </li>
     {% else %}
-    <li>目前沒有任何物品</li>
+    <li class="empty-state">目前沒有任何物品</li>
     {% endfor %}
   </ul>
 {% endblock %}

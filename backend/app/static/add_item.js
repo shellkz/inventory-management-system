@@ -49,6 +49,7 @@
 
       const removeBtn = document.createElement("button");
       removeBtn.type = "button";
+      removeBtn.className = "btn btn-secondary btn-small";
       removeBtn.textContent = "移除";
       removeBtn.addEventListener("click", () => removePhoto(index));
 
