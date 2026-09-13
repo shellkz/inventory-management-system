@@ -11,6 +11,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements.txt
 
 COPY app ./app
+COPY alembic ./alembic
+COPY alembic.ini .
 COPY wsgi.py .
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--worker-class", "gthread", "--workers", "2", "--threads", "4", "wsgi:app"]
+CMD ["sh", "-c", "alembic upgrade head && exec gunicorn --bind 0.0.0.0:5000 --worker-class gthread --workers 2 --threads 4 wsgi:app"]
