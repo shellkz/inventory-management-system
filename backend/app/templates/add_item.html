@@ -5,13 +5,31 @@
 {% block content %}
   <h1>新增物品</h1>
 
-  <section id="photo-widget">
-    <h2>參考照片</h2>
-    <div id="photo-list"></div>
-    <button type="button" id="add-photo-btn">新增照片</button>
-    <input type="file" id="camera-input" accept="image/*" capture="environment" hidden>
-    <input type="file" id="images-input" name="images" multiple hidden>
-  </section>
+  <form id="add-item-form">
+    <div>
+      <label for="name">名稱</label>
+      <input type="text" id="name" name="name" required>
+    </div>
+    <div>
+      <label for="category">分類</label>
+      <input type="text" id="category" name="category">
+    </div>
+    <div>
+      <label for="min_stock">庫存下限</label>
+      <input type="number" id="min_stock" name="min_stock" min="0" value="0">
+    </div>
+
+    <section id="photo-widget">
+      <h2>參考照片</h2>
+      <div id="photo-list"></div>
+      <button type="button" id="add-photo-btn">新增照片</button>
+      <input type="file" id="camera-input" accept="image/*" capture="environment" hidden>
+      <input type="file" id="images-input" name="images" multiple hidden>
+    </section>
+
+    <button type="button" id="debug-form-btn">檢查表單資料(測試用,之後移除)</button>
+    <pre id="form-debug"></pre>
+  </form>
 
   <script src="{{ url_for('static', filename='add_item.js') }}"></script>
 {% endblock %}
