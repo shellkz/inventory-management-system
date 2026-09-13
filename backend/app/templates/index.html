@@ -1,14 +1,9 @@
-<!doctype html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="utf-8">
-  <title>Inventory Manager</title>
-  <script src="{{ url_for('static', filename='htmx.min.js') }}"></script>
-</head>
-<body>
+{% extends "base.html" %}
+
+{% block content %}
   <h1>Inventory Manager</h1>
 
-  <button hx-get="/catalog" hx-target="#result">抓取目前登錄物品</button>
-  <div id="result"></div>
-</body>
-</html>
+  <nav>
+    <a href="/items">物品</a>
+  </nav>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}物品{% endblock %}
+
+{% block content %}
+  <h1>物品</h1>
+
+  <ul>
+    {% for item in items %}
+    <li{% if item.is_low %} class="low-stock"{% endif %}>
+      {{ item.name }}{% if item.category %}({{ item.category }}){% endif %}
+      — 數量: {{ item.quantity }}{% if item.is_low %} ⚠ 低於庫存下限({{ item.min_stock }}){% endif %}
+    </li>
+    {% else %}
+    <li>目前沒有任何物品</li>
+    {% endfor %}
+  </ul>
+{% endblock %}
