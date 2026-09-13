@@ -5,7 +5,13 @@
 {% block content %}
   <h1>新增物品</h1>
 
-  <form id="add-item-form">
+  <form
+    id="add-item-form"
+    hx-post="/items/add"
+    hx-encoding="multipart/form-data"
+    hx-target="#add-item-result"
+    hx-swap="innerHTML"
+  >
     <div>
       <label for="name">名稱</label>
       <input type="text" id="name" name="name" required>
@@ -27,9 +33,10 @@
       <input type="file" id="images-input" name="images" multiple hidden>
     </section>
 
-    <button type="button" id="debug-form-btn">檢查表單資料(測試用,之後移除)</button>
-    <pre id="form-debug"></pre>
+    <button type="submit">新增</button>
   </form>
+
+  <div id="add-item-result"></div>
 
   <script src="{{ url_for('static', filename='add_item.js') }}"></script>
 {% endblock %}

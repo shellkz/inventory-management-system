@@ -60,22 +60,4 @@
 
     syncInput();
   }
-
-  // 測試用:不打 API,純粹讀出整個表單(含檔案)確認欄位跟照片有沒有正確整合。
-  const form = document.getElementById("add-item-form");
-  const debugBtn = document.getElementById("debug-form-btn");
-  const debugOutput = document.getElementById("form-debug");
-
-  debugBtn.addEventListener("click", () => {
-    const data = new FormData(form);
-    const lines = [];
-    for (const [key, value] of data.entries()) {
-      if (value instanceof File) {
-        lines.push(`${key}: ${value.name} (${value.size} bytes, ${value.type})`);
-      } else {
-        lines.push(`${key}: ${value}`);
-      }
-    }
-    debugOutput.textContent = lines.join("\n");
-  });
 })();
