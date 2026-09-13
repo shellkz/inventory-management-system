@@ -5,6 +5,10 @@
 {% block content %}
   <h1>物品</h1>
 
+  <nav>
+    <a href="/items/add">新增物品</a>
+  </nav>
+
   <ul>
     {% for item in items %}
     <li{% if item.is_low %} class="low-stock"{% endif %}>
