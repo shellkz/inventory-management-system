@@ -86,6 +86,22 @@ def add_item():
     return response
 
 
+@main.route("/recognize", methods=["GET", "POST"])
+def recognize():
+    if request.method == "GET":
+        return render_template("recognize.html")
+
+    image = request.files["image"]
+    resp = requests.post(
+        f"{config.VISION_SERVICE_URL}/v1/recognize",
+        files={"file": (image.filename, image.stream, image.mimetype)},
+        headers={"Authorization": f"Bearer {config.VISION_API_KEY}"},
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
 @main.route("/items")
 def items():
     db = get_db()

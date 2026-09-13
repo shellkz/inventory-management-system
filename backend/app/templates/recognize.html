@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}辨識測試{% endblock %}
+
+{% block content %}
+  <h1>辨識測試</h1>
+
+  <button type="button" id="scan-btn">拍照辨識</button>
+  <input type="file" id="scan-input" accept="image/*" capture="environment" hidden>
+
+  <canvas id="scan-canvas"></canvas>
+
+  <ul id="scan-result"></ul>
+
+  <script src="{{ url_for('static', filename='recognize.js') }}"></script>
+{% endblock %}
