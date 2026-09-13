@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}新增物品{% endblock %}
+
+{% block content %}
+  <h1>新增物品</h1>
+
+  <section id="photo-widget">
+    <h2>參考照片</h2>
+    <div id="photo-list"></div>
+    <button type="button" id="add-photo-btn">新增照片</button>
+    <input type="file" id="camera-input" accept="image/*" capture="environment" hidden>
+    <input type="file" id="images-input" name="images" multiple hidden>
+  </section>
+
+  <script src="{{ url_for('static', filename='add_item.js') }}"></script>
+{% endblock %}

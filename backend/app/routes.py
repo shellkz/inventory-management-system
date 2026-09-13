@@ -27,6 +27,11 @@ def catalog():
     return render_template("_catalog.html", entities=entities)
 
 
+@main.route("/items/add")
+def add_item():
+    return render_template("add_item.html")
+
+
 @main.route("/items")
 def items():
     db = get_db()
