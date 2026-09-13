@@ -6,6 +6,8 @@ services:
     environment:
       - VISION_SERVICE_URL=${VISION_SERVICE_URL}
       - VISION_API_KEY=${VISION_API_KEY}
+    volumes:
+      - ./backend_data:/app/data
     depends_on:
       - vision-service
 
@@ -17,4 +19,4 @@ services:
       - VISION_API_KEY=${VISION_API_KEY}
     volumes:
       - ./models:/app/models
-      - ./data:/app/data
+      - ./vision_data:/app/data
