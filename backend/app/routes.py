@@ -1,12 +1,12 @@
 import requests
-from flask import Blueprint, make_response, render_template, request, url_for
+from flask import Blueprint, jsonify, make_response, render_template, request, url_for
 from pydantic import ValidationError
 from sqlalchemy import select
 
 from . import config
 from .db import get_db
 from .models import Inventory, Item
-from .schemas import ItemCreate
+from .schemas import ItemCreate, StockInRequest
 
 main = Blueprint("main", __name__)
 
@@ -102,9 +102,22 @@ def recognize():
     return resp.json()
 
 
-@main.route("/stock-in")
+@main.route("/stock-in", methods=["GET", "POST"])
 def stock_in():
-    return render_template("stock_in.html")
+    if request.method == "GET":
+        return render_template("stock_in.html")
+
+    body = request.get_json(silent=True)
+    if body is None:
+        return jsonify({"error": "invalid_json", "message": "request body 不是合法的 JSON"}), 400
+
+    try:
+        payload = StockInRequest.model_validate(body)
+    except ValidationError as e:
+        return jsonify({"error": "validation_error", "details": e.errors()}), 422
+
+    # Schema 驗證到此為止,還沒接資料庫/vision-service 商務邏輯。
+    return jsonify({"received_items": len(payload.items)}), 200
 
 
 @main.route("/items")

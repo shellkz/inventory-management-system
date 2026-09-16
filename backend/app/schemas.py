@@ -3,8 +3,24 @@ render_template 用,不用 response_model,理由跟 vision-service 的 schemas.p
 """
 from pydantic import BaseModel
 
+from .models import AnnotationStatus, Source
+
 
 class ItemCreate(BaseModel):
     name: str
     category: str | None = None
     min_stock: int = 0
+
+
+class StockInItem(BaseModel):
+    source: Source
+    predicted_class: str | None = None
+    predicted_bbox: tuple[float, float, float, float] | None = None
+    final_item_id: int | None = None
+    final_bbox: tuple[float, float, float, float] | None = None
+    annotation_status: AnnotationStatus
+
+
+class StockInRequest(BaseModel):
+    image: str | None = None
+    items: list[StockInItem]
