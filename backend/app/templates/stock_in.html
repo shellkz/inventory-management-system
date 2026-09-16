@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}入庫{% endblock %}
+
+{% block content %}
+  <h1>入庫</h1>
+
+  <button type="button" class="btn btn-primary" id="scan-btn">拍照掃描</button>
+  <input type="file" id="scan-input" accept="image/*" capture="environment" hidden>
+
+  <div class="scan-canvas-wrap">
+    <canvas id="scan-canvas"></canvas>
+  </div>
+
+  <ul id="candidate-list" class="candidate-list"></ul>
+
+  <script src="{{ url_for('static', filename='stock_in.js') }}"></script>
+{% endblock %}

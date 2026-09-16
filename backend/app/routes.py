@@ -102,6 +102,11 @@ def recognize():
     return resp.json()
 
 
+@main.route("/stock-in")
+def stock_in():
+    return render_template("stock_in.html")
+
+
 @main.route("/items")
 def items():
     db = get_db()
