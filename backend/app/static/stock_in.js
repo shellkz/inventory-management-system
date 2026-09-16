@@ -7,6 +7,8 @@
   const listEl = document.getElementById("candidate-list");
   const rejectedSection = document.getElementById("rejected-section");
   const rejectedListEl = document.getElementById("rejected-list");
+  const submitBtn = document.getElementById("submit-btn");
+  const submitError = document.getElementById("submit-error");
 
   const POINT_HIT_RADIUS_RATIO = 40; // 半徑 = canvas.width / 40
 
@@ -45,6 +47,7 @@
       candidates = await runRecognize(file);
 
       addBtn.hidden = false;
+      submitBtn.hidden = false;
       render();
     };
     img.src = URL.createObjectURL(file);
@@ -291,4 +294,58 @@
       rejectedListEl.appendChild(li);
     });
   }
+
+  function buildSubmissionPayload() {
+    const items = candidates
+      // 手動新增又被刪除的項目,從沒真的存在過,不送出。
+      .filter((c) => !(c.status === "rejected" && c.source === "manual_add"))
+      .map((c) => {
+        let annotationStatus;
+        let finalBbox = null;
+
+        if (c.status === "needs_bbox") {
+          annotationStatus = "needs_bbox";
+        } else if (c.status === "rejected") {
+          annotationStatus = "confirmed"; // 確認為誤判(false positive),final_item_id 為 null
+        } else {
+          annotationStatus = "confirmed";
+          finalBbox = c.predicted_bbox; // 接受目前的框當作最終結果
+        }
+
+        return {
+          source: c.source,
+          predicted_class: c.predicted_item_id === null ? null : itemName(c.predicted_item_id),
+          predicted_bbox: c.predicted_bbox,
+          final_item_id: c.final_item_id,
+          final_bbox: finalBbox,
+          annotation_status: annotationStatus,
+        };
+      });
+
+    return { items };
+  }
+
+  submitBtn.addEventListener("click", async () => {
+    submitError.hidden = true;
+    submitBtn.disabled = true;
+
+    try {
+      const resp = await fetch("/stock-in", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildSubmissionPayload()),
+      });
+
+      if (!resp.ok) {
+        const data = await resp.json();
+        throw new Error(data.error || `HTTP ${resp.status}`);
+      }
+
+      window.location.href = "/items";
+    } catch (e) {
+      submitError.textContent = `提交失敗: ${e.message}`;
+      submitError.hidden = false;
+      submitBtn.disabled = false;
+    }
+  });
 })();

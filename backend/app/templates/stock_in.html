@@ -20,5 +20,8 @@
     <ul id="rejected-list" class="candidate-list"></ul>
   </section>
 
+  <button type="button" class="btn btn-primary" id="submit-btn" hidden>提交</button>
+  <p id="submit-error" class="alert alert--error" hidden></p>
+
   <script src="{{ url_for('static', filename='stock_in.js') }}"></script>
 {% endblock %}

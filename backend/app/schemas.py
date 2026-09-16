@@ -22,5 +22,4 @@ class StockInItem(BaseModel):
 
 
 class StockInRequest(BaseModel):
-    image: str | None = None
     items: list[StockInItem]
