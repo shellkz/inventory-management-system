@@ -1,11 +1,4 @@
 (function () {
-  // Stage 1(修改): 純前端,用假資料模擬 /recognize 的結果,還沒有真的打 API。
-  const MOCK_CATALOG = [
-    { id: 1, name: "電池" },
-    { id: 2, name: "螺絲" },
-    { id: 3, name: "瓶蓋" },
-  ];
-
   const scanBtn = document.getElementById("scan-btn");
   const scanInput = document.getElementById("scan-input");
   const addBtn = document.getElementById("add-btn");
@@ -20,6 +13,14 @@
   let currentImage = null;
   let candidates = [];
   let addMode = false;
+  let catalog = [];
+
+  const catalogPromise = loadCatalog();
+
+  async function loadCatalog() {
+    const resp = await fetch("/items", { headers: { Accept: "application/json" } });
+    catalog = await resp.json();
+  }
 
   addBtn.addEventListener("click", () => {
     addMode = !addMode;
@@ -35,16 +36,36 @@
     if (!file) return;
 
     const img = new Image();
-    img.onload = () => {
+    img.onload = async () => {
       currentImage = img;
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
-      candidates = buildMockCandidates(canvas.width, canvas.height);
+
+      await catalogPromise;
+      candidates = await runRecognize(file);
+
       addBtn.hidden = false;
       render();
     };
     img.src = URL.createObjectURL(file);
   });
+
+  async function runRecognize(file) {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const resp = await fetch("/recognize", { method: "POST", body: formData });
+    const data = await resp.json();
+
+    return data.result.map((r) => ({
+      source: "auto_detected",
+      predicted_bbox: r.bbox,
+      predicted_item_id: r.item_id,
+      final_item_id: r.item_id,
+      status: "ok",
+      selected: false,
+    }));
+  }
 
   canvas.addEventListener("click", (e) => {
     const rect = canvas.getBoundingClientRect();
@@ -94,9 +115,8 @@
       source: "manual_add",
       predicted_bbox: null,
       predicted_point: [x, y],
-      predicted_entity_id: null,
-      predicted_entity_name: null,
-      final_entity_id: null,
+      predicted_item_id: null,
+      final_item_id: null,
       status: "ok",
       selected: false,
     });
@@ -106,31 +126,8 @@
     render();
   }
 
-  function buildMockCandidates(w, h) {
-    return [
-      {
-        source: "auto_detected",
-        predicted_bbox: [w * 0.08, h * 0.1, w * 0.45, h * 0.42],
-        predicted_entity_id: 1,
-        predicted_entity_name: "電池",
-        final_entity_id: 1,
-        status: "ok",
-        selected: false,
-      },
-      {
-        source: "auto_detected",
-        predicted_bbox: [w * 0.52, h * 0.48, w * 0.92, h * 0.82],
-        predicted_entity_id: 2,
-        predicted_entity_name: "螺絲",
-        final_entity_id: 2,
-        status: "ok",
-        selected: false,
-      },
-    ];
-  }
-
-  function entityName(id) {
-    const entry = MOCK_CATALOG.find((e) => e.id === id);
+  function itemName(id) {
+    const entry = catalog.find((e) => e.id === id);
     return entry ? entry.name : "未知";
   }
 
@@ -141,8 +138,8 @@
     render();
   }
 
-  function setFinalEntity(index, entityId) {
-    candidates[index].final_entity_id = entityId;
+  function setFinalItem(index, itemId) {
+    candidates[index].final_item_id = itemId;
     render();
   }
 
@@ -154,8 +151,8 @@
 
   function rejectCandidate(index) {
     const c = candidates[index];
-    c.final_entity_id_before_reject = c.final_entity_id; // 記住刪除前的選擇,復原時還原用
-    c.final_entity_id = null;
+    c.final_item_id_before_reject = c.final_item_id; // 記住刪除前的選擇,復原時還原用
+    c.final_item_id = null;
     c.status = "rejected";
     c.selected = false;
     render();
@@ -163,7 +160,7 @@
 
   function restoreCandidate(index) {
     const c = candidates[index];
-    c.final_entity_id = c.final_entity_id_before_reject ?? c.predicted_entity_id;
+    c.final_item_id = c.final_item_id_before_reject ?? c.predicted_item_id;
     c.status = "ok";
     render();
   }
@@ -193,13 +190,13 @@
         ctx.setLineDash(c.status === "needs_bbox" ? [10, 6] : []);
         ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
         ctx.setLineDash([]);
-        ctx.fillText(entityName(c.final_entity_id), x1, y1 > 20 ? y1 - 5 : y1 + 15);
+        ctx.fillText(itemName(c.final_item_id), x1, y1 > 20 ? y1 - 5 : y1 + 15);
       } else if (c.predicted_point) {
         const [px, py] = c.predicted_point;
         const half = canvas.width / POINT_HIT_RADIUS_RATIO;
         ctx.lineWidth = c.selected ? Math.max(4, canvas.width / 150) : Math.max(2, canvas.width / 300);
         ctx.strokeRect(px - half, py - half, half * 2, half * 2);
-        ctx.fillText(entityName(c.final_entity_id), px + half + 4, py);
+        ctx.fillText(itemName(c.final_item_id), px + half + 4, py);
       }
     });
   }
@@ -215,23 +212,23 @@
       li.addEventListener("click", () => selectCandidate(index));
 
       const select = document.createElement("select");
-      if (c.final_entity_id === null) {
+      if (c.final_item_id === null) {
         const placeholder = document.createElement("option");
         placeholder.value = "";
         placeholder.textContent = "請選擇類別";
         placeholder.selected = true;
         select.appendChild(placeholder);
       }
-      MOCK_CATALOG.forEach((entry) => {
+      catalog.forEach((entry) => {
         const option = document.createElement("option");
         option.value = entry.id;
         option.textContent = entry.name;
-        if (entry.id === c.final_entity_id) option.selected = true;
+        if (entry.id === c.final_item_id) option.selected = true;
         select.appendChild(option);
       });
       select.addEventListener("click", (e) => e.stopPropagation());
       select.addEventListener("change", () => {
-        setFinalEntity(index, select.value === "" ? null : Number(select.value));
+        setFinalItem(index, select.value === "" ? null : Number(select.value));
       });
 
       li.appendChild(select);
@@ -281,7 +278,7 @@
       li.className = "candidate-row";
 
       const name = document.createElement("span");
-      name.textContent = c.predicted_entity_name || "手動新增的物件";
+      name.textContent = c.source === "manual_add" ? "手動新增的物件" : itemName(c.predicted_item_id);
 
       const restoreBtn = document.createElement("button");
       restoreBtn.type = "button";
