@@ -100,7 +100,25 @@ def recognize():
         timeout=30,
     )
     resp.raise_for_status()
-    return resp.json()
+    data = resp.json()
+
+    # 把 vision-service 自己的 entity_id 翻譯成 backend 的 item_id,
+    # 不讓 vision-service 的 ID 系統外流到前端。查不到對應 item 就是 null
+    # (孤兒 entity,或 objectness 高但沒有夠接近的比對結果,兩種情況前端都一視同仁處理)。
+    db = get_db()
+    result = []
+    for r in data["result"]:
+        item = db.query(Item).filter(Item.recognition_entity_id == r["entity_id"]).first()
+        result.append(
+            {
+                "bbox": r["bbox"],
+                "score": r["score"],
+                "meets_threshold": r["meets_threshold"],
+                "item_id": item.id if item else None,
+            }
+        )
+
+    return jsonify({"score_threshold": data["score_threshold"], "result": result})
 
 
 @main.route("/stock-in", methods=["GET", "POST"])
@@ -143,4 +161,6 @@ def items():
             }
         )
 
+    if request.accept_mimetypes.best_match(["application/json", "text/html"]) == "application/json":
+        return jsonify(items_view)
     return render_template("items.html", items=items_view)
