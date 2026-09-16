@@ -9,6 +9,7 @@
   const rejectedListEl = document.getElementById("rejected-list");
   const submitBtn = document.getElementById("submit-btn");
   const submitError = document.getElementById("submit-error");
+  const recognizeError = document.getElementById("recognize-error");
 
   const POINT_HIT_RADIUS_RATIO = 40; // 半徑 = canvas.width / 40
 
@@ -42,9 +43,16 @@
       currentImage = img;
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
+      recognizeError.hidden = true;
 
-      await catalogPromise;
-      candidates = await runRecognize(file);
+      try {
+        await catalogPromise;
+        candidates = await runRecognize(file);
+      } catch (e) {
+        recognizeError.textContent = `辨識失敗: ${e.message}`;
+        recognizeError.hidden = false;
+        return;
+      }
 
       addBtn.hidden = false;
       submitBtn.hidden = false;
@@ -59,6 +67,7 @@
 
     const resp = await fetch("/recognize", { method: "POST", body: formData });
     const data = await resp.json();
+    if (!resp.ok) throw new Error(data.message || `HTTP ${resp.status}`);
 
     return data.result.map((r) => ({
       source: "auto_detected",

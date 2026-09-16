@@ -93,13 +93,17 @@ def recognize():
         return render_template("recognize.html")
 
     image = request.files["image"]
-    resp = requests.post(
-        f"{config.VISION_SERVICE_URL}/v1/recognize",
-        files={"file": (image.filename, image.stream, image.mimetype)},
-        headers={"Authorization": f"Bearer {config.VISION_API_KEY}"},
-        timeout=30,
-    )
-    resp.raise_for_status()
+    try:
+        resp = requests.post(
+            f"{config.VISION_SERVICE_URL}/v1/recognize",
+            files={"file": (image.filename, image.stream, image.mimetype)},
+            headers={"Authorization": f"Bearer {config.VISION_API_KEY}"},
+            timeout=30,
+        )
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        return jsonify({"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}), 502
+
     data = resp.json()
 
     # 把 vision-service 自己的 entity_id 翻譯成 backend 的 item_id,
