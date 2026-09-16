@@ -11,6 +11,8 @@
   const canvas = document.getElementById("scan-canvas");
   const ctx = canvas.getContext("2d");
   const listEl = document.getElementById("candidate-list");
+  const rejectedSection = document.getElementById("rejected-section");
+  const rejectedListEl = document.getElementById("rejected-list");
 
   let currentImage = null;
   let candidates = [];
@@ -42,6 +44,7 @@
     let hitIndex = -1;
     let hitArea = Infinity;
     candidates.forEach((c, index) => {
+      if (c.status === "rejected") return;
       const [x1, y1, x2, y2] = c.predicted_bbox;
       if (x >= x1 && x <= x2 && y >= y1 && y <= y2) {
         const area = (x2 - x1) * (y2 - y1);
@@ -101,9 +104,25 @@
     render();
   }
 
+  function rejectCandidate(index) {
+    const c = candidates[index];
+    c.final_entity_id = null;
+    c.status = "rejected";
+    c.selected = false;
+    render();
+  }
+
+  function restoreCandidate(index) {
+    const c = candidates[index];
+    c.final_entity_id = c.predicted_entity_id;
+    c.status = "ok";
+    render();
+  }
+
   function render() {
     drawCanvas();
     renderList();
+    renderRejectedList();
   }
 
   function drawCanvas() {
@@ -112,6 +131,8 @@
     ctx.drawImage(currentImage, 0, 0);
 
     candidates.forEach((c) => {
+      if (c.status === "rejected") return;
+
       const [x1, y1, x2, y2] = c.predicted_bbox;
       ctx.lineWidth = c.selected ? Math.max(4, canvas.width / 150) : Math.max(2, canvas.width / 300);
       ctx.strokeStyle = c.status === "needs_bbox" ? "#d97706" : "#dc2626";
@@ -129,6 +150,8 @@
     listEl.innerHTML = "";
 
     candidates.forEach((c, index) => {
+      if (c.status === "rejected") return;
+
       const li = document.createElement("li");
       li.className = "candidate-row" + (c.selected ? " candidate-row--selected" : "");
       li.addEventListener("click", () => selectCandidate(index));
@@ -156,11 +179,48 @@
       bboxLabel.appendChild(bboxCheckbox);
       bboxLabel.appendChild(document.createTextNode("框不準"));
 
+      const rejectBtn = document.createElement("button");
+      rejectBtn.type = "button";
+      rejectBtn.className = "btn btn-secondary btn-small";
+      rejectBtn.textContent = "刪除";
+      rejectBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        rejectCandidate(index);
+      });
+
       li.appendChild(select);
       li.appendChild(bboxLabel);
+      li.appendChild(rejectBtn);
       listEl.appendChild(li);
 
       if (c.selected) li.scrollIntoView({ block: "nearest" });
+    });
+  }
+
+  function renderRejectedList() {
+    rejectedListEl.innerHTML = "";
+    const rejected = candidates
+      .map((c, index) => ({ c, index }))
+      .filter(({ c }) => c.status === "rejected");
+
+    rejectedSection.hidden = rejected.length === 0;
+
+    rejected.forEach(({ c, index }) => {
+      const li = document.createElement("li");
+      li.className = "candidate-row";
+
+      const name = document.createElement("span");
+      name.textContent = c.predicted_entity_name;
+
+      const restoreBtn = document.createElement("button");
+      restoreBtn.type = "button";
+      restoreBtn.className = "btn btn-secondary btn-small";
+      restoreBtn.textContent = "復原";
+      restoreBtn.addEventListener("click", () => restoreCandidate(index));
+
+      li.appendChild(name);
+      li.appendChild(restoreBtn);
+      rejectedListEl.appendChild(li);
     });
   }
 })();
