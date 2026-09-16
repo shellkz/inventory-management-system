@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}入庫{% endblock %}
+
+{% block content %}
+  <h1>入庫</h1>
+
+  <button type="button" class="btn btn-primary" id="scan-btn">拍照掃描</button>
+  <input type="file" id="scan-input" accept="image/*" capture="environment" hidden>
+  <button type="button" class="btn btn-secondary" id="add-btn" hidden>新增物件</button>
+  <p id="recognize-error" class="alert alert--error" hidden></p>
+
+  <div class="scan-canvas-wrap">
+    <canvas id="scan-canvas"></canvas>
+  </div>
+
+  <ul id="candidate-list" class="candidate-list"></ul>
+
+  <section id="rejected-section" hidden>
+    <h2>排除物件</h2>
+    <ul id="rejected-list" class="candidate-list"></ul>
+  </section>
+
+  <button type="button" class="btn btn-primary" id="submit-btn" hidden>提交</button>
+  <p id="submit-error" class="alert alert--error" hidden></p>
+
+  <script src="{{ url_for('static', filename='stock_in.js') }}"></script>
+{% endblock %}

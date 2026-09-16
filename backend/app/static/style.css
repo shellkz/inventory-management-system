@@ -18,6 +18,12 @@
   box-sizing: border-box;
 }
 
+/* .btn 等 class 設了 display,優先權跟瀏覽器內建的 [hidden] 規則一樣高,
+   沒有這條會被蓋掉,導致 hidden 屬性失效。*/
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   background: var(--color-bg);
@@ -324,4 +330,48 @@ a {
   gap: 6px;
   font-size: 0.85rem;
   color: var(--color-text-muted);
+}
+
+/* ---- 入庫: 候選物件列表 ---- */
+
+.candidate-list {
+  list-style: none;
+  margin: var(--spacing) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.candidate-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 10px var(--spacing);
+  cursor: pointer;
+}
+
+.candidate-row--selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.candidate-row select {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+}
+
+.candidate-row__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
 }

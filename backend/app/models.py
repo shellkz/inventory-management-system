@@ -76,7 +76,6 @@ class StockTransaction(Base):
     id = Column(Integer, primary_key=True)
     type = Column(_enum_values(TransactionType), nullable=False)
     operator_id = Column(String, nullable=True)
-    image_path = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 

@@ -1,12 +1,13 @@
 import requests
-from flask import Blueprint, make_response, render_template, request, url_for
+from flask import Blueprint, jsonify, make_response, render_template, request, url_for
 from pydantic import ValidationError
 from sqlalchemy import select
 
 from . import config
 from .db import get_db
 from .models import Inventory, Item
-from .schemas import ItemCreate
+from .schemas import ItemCreate, StockInRequest
+from .stock_ops import process_stock_in
 
 main = Blueprint("main", __name__)
 
@@ -92,14 +93,55 @@ def recognize():
         return render_template("recognize.html")
 
     image = request.files["image"]
-    resp = requests.post(
-        f"{config.VISION_SERVICE_URL}/v1/recognize",
-        files={"file": (image.filename, image.stream, image.mimetype)},
-        headers={"Authorization": f"Bearer {config.VISION_API_KEY}"},
-        timeout=30,
-    )
-    resp.raise_for_status()
-    return resp.json()
+    try:
+        resp = requests.post(
+            f"{config.VISION_SERVICE_URL}/v1/recognize",
+            files={"file": (image.filename, image.stream, image.mimetype)},
+            headers={"Authorization": f"Bearer {config.VISION_API_KEY}"},
+            timeout=30,
+        )
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        return jsonify({"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}), 502
+
+    data = resp.json()
+
+    # 把 vision-service 自己的 entity_id 翻譯成 backend 的 item_id,
+    # 不讓 vision-service 的 ID 系統外流到前端。查不到對應 item 就是 null
+    # (孤兒 entity,或 objectness 高但沒有夠接近的比對結果,兩種情況前端都一視同仁處理)。
+    db = get_db()
+    result = []
+    for r in data["result"]:
+        item = db.query(Item).filter(Item.recognition_entity_id == r["entity_id"]).first()
+        result.append(
+            {
+                "bbox": r["bbox"],
+                "score": r["score"],
+                "meets_threshold": r["meets_threshold"],
+                "item_id": item.id if item else None,
+            }
+        )
+
+    return jsonify({"score_threshold": data["score_threshold"], "result": result})
+
+
+@main.route("/stock-in", methods=["GET", "POST"])
+def stock_in():
+    if request.method == "GET":
+        return render_template("stock_in.html")
+
+    body = request.get_json(silent=True)
+    if body is None:
+        return jsonify({"error": "invalid_json", "message": "request body 不是合法的 JSON"}), 400
+
+    try:
+        payload = StockInRequest.model_validate(body)
+    except ValidationError as e:
+        return jsonify({"error": "validation_error", "details": e.errors()}), 422
+
+    db = get_db()
+    transaction = process_stock_in(db, payload)
+    return jsonify({"transaction_id": transaction.id}), 200
 
 
 @main.route("/items")
@@ -123,4 +165,6 @@ def items():
             }
         )
 
+    if request.accept_mimetypes.best_match(["application/json", "text/html"]) == "application/json":
+        return jsonify(items_view)
     return render_template("items.html", items=items_view)
