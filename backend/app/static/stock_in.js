@@ -8,14 +8,25 @@
 
   const scanBtn = document.getElementById("scan-btn");
   const scanInput = document.getElementById("scan-input");
+  const addBtn = document.getElementById("add-btn");
   const canvas = document.getElementById("scan-canvas");
   const ctx = canvas.getContext("2d");
   const listEl = document.getElementById("candidate-list");
   const rejectedSection = document.getElementById("rejected-section");
   const rejectedListEl = document.getElementById("rejected-list");
 
+  const POINT_HIT_RADIUS_RATIO = 40; // 半徑 = canvas.width / 40
+
   let currentImage = null;
   let candidates = [];
+  let addMode = false;
+
+  addBtn.addEventListener("click", () => {
+    addMode = !addMode;
+    addBtn.classList.toggle("btn-primary", addMode);
+    addBtn.classList.toggle("btn-secondary", !addMode);
+    addBtn.textContent = addMode ? "點擊畫面放置" : "新增物件";
+  });
 
   scanBtn.addEventListener("click", () => scanInput.click());
 
@@ -29,6 +40,7 @@
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
       candidates = buildMockCandidates(canvas.width, canvas.height);
+      addBtn.hidden = false;
       render();
     };
     img.src = URL.createObjectURL(file);
@@ -41,15 +53,34 @@
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
+    if (addMode) {
+      addCandidateAtPoint(x, y);
+      addMode = false;
+      addBtn.classList.remove("btn-primary");
+      addBtn.classList.add("btn-secondary");
+      addBtn.textContent = "新增物件";
+      return;
+    }
+
     let hitIndex = -1;
     let hitArea = Infinity;
     candidates.forEach((c, index) => {
       if (c.status === "rejected") return;
-      const [x1, y1, x2, y2] = c.predicted_bbox;
-      if (x >= x1 && x <= x2 && y >= y1 && y <= y2) {
-        const area = (x2 - x1) * (y2 - y1);
-        if (area < hitArea) {
-          hitArea = area;
+
+      if (c.predicted_bbox) {
+        const [x1, y1, x2, y2] = c.predicted_bbox;
+        if (x >= x1 && x <= x2 && y >= y1 && y <= y2) {
+          const area = (x2 - x1) * (y2 - y1);
+          if (area < hitArea) {
+            hitArea = area;
+            hitIndex = index;
+          }
+        }
+      } else if (c.predicted_point) {
+        const [px, py] = c.predicted_point;
+        const half = canvas.width / POINT_HIT_RADIUS_RATIO;
+        if (Math.abs(x - px) <= half && Math.abs(y - py) <= half && 0 < hitArea) {
+          hitArea = 0; // 點永遠比任何框小,優先命中
           hitIndex = index;
         }
       }
@@ -57,6 +88,23 @@
 
     if (hitIndex !== -1) selectCandidate(hitIndex);
   });
+
+  function addCandidateAtPoint(x, y) {
+    candidates.push({
+      source: "manual_add",
+      predicted_bbox: null,
+      predicted_point: [x, y],
+      predicted_entity_id: null,
+      predicted_entity_name: null,
+      final_entity_id: null,
+      status: "ok",
+      selected: false,
+    });
+    candidates.forEach((c, i) => {
+      c.selected = i === candidates.length - 1;
+    });
+    render();
+  }
 
   function buildMockCandidates(w, h) {
     return [
@@ -106,6 +154,7 @@
 
   function rejectCandidate(index) {
     const c = candidates[index];
+    c.final_entity_id_before_reject = c.final_entity_id; // 記住刪除前的選擇,復原時還原用
     c.final_entity_id = null;
     c.status = "rejected";
     c.selected = false;
@@ -114,7 +163,7 @@
 
   function restoreCandidate(index) {
     const c = candidates[index];
-    c.final_entity_id = c.predicted_entity_id;
+    c.final_entity_id = c.final_entity_id_before_reject ?? c.predicted_entity_id;
     c.status = "ok";
     render();
   }
@@ -133,16 +182,25 @@
     candidates.forEach((c) => {
       if (c.status === "rejected") return;
 
-      const [x1, y1, x2, y2] = c.predicted_bbox;
-      ctx.lineWidth = c.selected ? Math.max(4, canvas.width / 150) : Math.max(2, canvas.width / 300);
-      ctx.strokeStyle = c.status === "needs_bbox" ? "#d97706" : "#dc2626";
-      ctx.setLineDash(c.status === "needs_bbox" ? [10, 6] : []);
-      ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-      ctx.setLineDash([]);
-
-      ctx.fillStyle = ctx.strokeStyle;
+      const color = c.status === "needs_bbox" ? "#d97706" : "#dc2626";
+      ctx.fillStyle = color;
+      ctx.strokeStyle = color;
       ctx.font = `${Math.max(16, canvas.width / 40)}px sans-serif`;
-      ctx.fillText(entityName(c.final_entity_id), x1, y1 > 20 ? y1 - 5 : y1 + 15);
+
+      if (c.predicted_bbox) {
+        const [x1, y1, x2, y2] = c.predicted_bbox;
+        ctx.lineWidth = c.selected ? Math.max(4, canvas.width / 150) : Math.max(2, canvas.width / 300);
+        ctx.setLineDash(c.status === "needs_bbox" ? [10, 6] : []);
+        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        ctx.setLineDash([]);
+        ctx.fillText(entityName(c.final_entity_id), x1, y1 > 20 ? y1 - 5 : y1 + 15);
+      } else if (c.predicted_point) {
+        const [px, py] = c.predicted_point;
+        const half = canvas.width / POINT_HIT_RADIUS_RATIO;
+        ctx.lineWidth = c.selected ? Math.max(4, canvas.width / 150) : Math.max(2, canvas.width / 300);
+        ctx.strokeRect(px - half, py - half, half * 2, half * 2);
+        ctx.fillText(entityName(c.final_entity_id), px + half + 4, py);
+      }
     });
   }
 
@@ -157,6 +215,13 @@
       li.addEventListener("click", () => selectCandidate(index));
 
       const select = document.createElement("select");
+      if (c.final_entity_id === null) {
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "請選擇類別";
+        placeholder.selected = true;
+        select.appendChild(placeholder);
+      }
       MOCK_CATALOG.forEach((entry) => {
         const option = document.createElement("option");
         option.value = entry.id;
@@ -165,19 +230,27 @@
         select.appendChild(option);
       });
       select.addEventListener("click", (e) => e.stopPropagation());
-      select.addEventListener("change", () => setFinalEntity(index, Number(select.value)));
+      select.addEventListener("change", () => {
+        setFinalEntity(index, select.value === "" ? null : Number(select.value));
+      });
 
-      const bboxLabel = document.createElement("label");
-      bboxLabel.className = "candidate-row__checkbox";
+      li.appendChild(select);
 
-      const bboxCheckbox = document.createElement("input");
-      bboxCheckbox.type = "checkbox";
-      bboxCheckbox.checked = c.status === "needs_bbox";
-      bboxCheckbox.addEventListener("click", (e) => e.stopPropagation());
-      bboxCheckbox.addEventListener("change", () => toggleBboxStatus(index));
+      // 手動新增的物件沒有 predicted_bbox,「框不準」這個概念對它沒有意義。
+      if (c.predicted_bbox) {
+        const bboxLabel = document.createElement("label");
+        bboxLabel.className = "candidate-row__checkbox";
 
-      bboxLabel.appendChild(bboxCheckbox);
-      bboxLabel.appendChild(document.createTextNode("框不準"));
+        const bboxCheckbox = document.createElement("input");
+        bboxCheckbox.type = "checkbox";
+        bboxCheckbox.checked = c.status === "needs_bbox";
+        bboxCheckbox.addEventListener("click", (e) => e.stopPropagation());
+        bboxCheckbox.addEventListener("change", () => toggleBboxStatus(index));
+
+        bboxLabel.appendChild(bboxCheckbox);
+        bboxLabel.appendChild(document.createTextNode("框不準"));
+        li.appendChild(bboxLabel);
+      }
 
       const rejectBtn = document.createElement("button");
       rejectBtn.type = "button";
@@ -187,10 +260,8 @@
         e.stopPropagation();
         rejectCandidate(index);
       });
-
-      li.appendChild(select);
-      li.appendChild(bboxLabel);
       li.appendChild(rejectBtn);
+
       listEl.appendChild(li);
 
       if (c.selected) li.scrollIntoView({ block: "nearest" });
@@ -210,7 +281,7 @@
       li.className = "candidate-row";
 
       const name = document.createElement("span");
-      name.textContent = c.predicted_entity_name;
+      name.textContent = c.predicted_entity_name || "手動新增的物件";
 
       const restoreBtn = document.createElement("button");
       restoreBtn.type = "button";
