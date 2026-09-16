@@ -7,6 +7,7 @@ from . import config
 from .db import get_db
 from .models import Inventory, Item
 from .schemas import ItemCreate, StockInRequest
+from .stock_ops import process_stock_in
 
 main = Blueprint("main", __name__)
 
@@ -116,8 +117,9 @@ def stock_in():
     except ValidationError as e:
         return jsonify({"error": "validation_error", "details": e.errors()}), 422
 
-    # Schema 驗證到此為止,還沒接資料庫/vision-service 商務邏輯。
-    return jsonify({"received_items": len(payload.items)}), 200
+    db = get_db()
+    transaction = process_stock_in(db, payload)
+    return jsonify({"transaction_id": transaction.id}), 200
 
 
 @main.route("/items")
