@@ -87,13 +87,9 @@ class StockTransactionItem(Base):
     id = Column(Integer, primary_key=True)
     transaction_id = Column(Integer, ForeignKey("stock_transactions.id"), nullable=False)
     final_item_id = Column(Integer, ForeignKey("items.id"), nullable=True)
-    final_bbox = Column(JSON, nullable=True)
     predicted_class = Column(String, nullable=True)
     predicted_class_score = Column(Float, nullable=True)
     predicted_objectness_conf = Column(Float, nullable=True)
-    predicted_bbox = Column(JSON, nullable=True)
     source = Column(_enum_values(Source), nullable=False)
-    annotation_status = Column(
-        _enum_values(AnnotationStatus), nullable=False, default=AnnotationStatus.PENDING_REVIEW
-    )
+    prediction_id = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

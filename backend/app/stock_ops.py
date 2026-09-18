@@ -20,10 +20,8 @@ def process_stock_in(db: Session, payload: StockInRequest) -> StockTransaction:
                 transaction_id=transaction.id,
                 source=item.source,
                 predicted_class=item.predicted_class,
-                predicted_bbox=list(item.predicted_bbox) if item.predicted_bbox else None,
                 final_item_id=item.final_item_id,
-                final_bbox=list(item.final_bbox) if item.final_bbox else None,
-                annotation_status=item.annotation_status,
+                prediction_id=item.prediction_id,
             )
         )
         if item.final_item_id is not None:

@@ -1,5 +1,5 @@
 import requests
-from flask import Blueprint, jsonify, make_response, render_template, request, url_for
+from flask import Blueprint, current_app, jsonify, make_response, render_template, request, url_for
 from pydantic import ValidationError
 from sqlalchemy import select
 
@@ -119,6 +119,9 @@ def recognize():
                 "score": r["score"],
                 "meets_threshold": r["meets_threshold"],
                 "item_id": item.id if item else None,
+                "prediction_id": r["prediction_id"],
+                "instance_id": r["instance_id"],
+                "entity_id": r["entity_id"],
             }
         )
 
@@ -141,6 +144,36 @@ def stock_in():
 
     db = get_db()
     transaction = process_stock_in(db, payload)
+
+    # 把人工審核結果回饋給vision(TEMP:先inline寫,之後抽出vision_client.py)。
+    # 失敗只記log,不影響這次入庫已經成功的事實。
+    headers = {"Authorization": f"Bearer {config.VISION_API_KEY}"}
+    for item in payload.items:
+        if item.prediction_id is None:
+            continue
+        if item.final_item_id is None:
+            final_instance_id = None  # 確認為誤判(false positive)
+        elif item.final_instance_id is not None:
+            final_instance_id = item.final_instance_id
+        else:
+            continue  # 還沒有明確的instance資訊(例如舊版前端尚未提供),暫不同步
+
+        try:
+            resp = requests.patch(
+                f"{config.VISION_SERVICE_URL}/v1/predictions/{item.prediction_id}",
+                json={
+                    "final_instance_id": final_instance_id,
+                    "final_bbox": list(item.final_bbox) if item.final_bbox else None,
+                },
+                headers=headers,
+                timeout=10,
+            )
+            resp.raise_for_status()
+        except requests.RequestException as e:
+            current_app.logger.warning(
+                f"同步修正結果到vision失敗 prediction_id={item.prediction_id}: {e}"
+            )
+
     return jsonify({"transaction_id": transaction.id}), 200
 
 
@@ -151,20 +184,47 @@ def items():
         select(Item, Inventory.quantity).outerjoin(Inventory, Item.id == Inventory.item_id)
     ).all()
 
+    is_json = request.accept_mimetypes.best_match(["application/json", "text/html"]) == "application/json"
+
+    # instance 清單只有 JSON(給入庫審核用)才需要,HTML 頁面不用,不用多打 vision-service。
+    # 每個entity都要查(即使只有一個instance),前端改類別時才有id可以填final_instance_id;
+    # UI要不要顯示選擇畫面,交給前端自己看instances長度決定。
+    instances_by_entity_id = {}
+    if is_json:
+        headers = {"Authorization": f"Bearer {config.VISION_API_KEY}"}
+        try:
+            entities_resp = requests.get(
+                f"{config.VISION_SERVICE_URL}/v1/entities", headers=headers, timeout=10
+            )
+            entities_resp.raise_for_status()
+            for entity in entities_resp.json()["result"]:
+                instances_resp = requests.get(
+                    f"{config.VISION_SERVICE_URL}/v1/entities/{entity['id']}/instances",
+                    headers=headers,
+                    timeout=10,
+                )
+                instances_resp.raise_for_status()
+                instances_by_entity_id[entity["id"]] = [
+                    {"id": i["id"], "name": i["name"]} for i in instances_resp.json()["result"]
+                ]
+        except requests.RequestException as e:
+            return jsonify({"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}), 502
+
     items_view = []
     for item, quantity in rows:
         quantity = quantity if quantity is not None else 0
-        items_view.append(
-            {
-                "id": item.id,
-                "name": item.name,
-                "category": item.category,
-                "quantity": quantity,
-                "min_stock": item.min_stock,
-                "is_low": quantity < item.min_stock,
-            }
-        )
+        entry = {
+            "id": item.id,
+            "name": item.name,
+            "category": item.category,
+            "quantity": quantity,
+            "min_stock": item.min_stock,
+            "is_low": quantity < item.min_stock,
+        }
+        if is_json:
+            entry["instances"] = instances_by_entity_id.get(item.recognition_entity_id, [])
+        items_view.append(entry)
 
-    if request.accept_mimetypes.best_match(["application/json", "text/html"]) == "application/json":
+    if is_json:
         return jsonify(items_view)
     return render_template("items.html", items=items_view)
