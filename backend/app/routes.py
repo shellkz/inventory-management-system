@@ -119,6 +119,7 @@ def recognize():
                 "score": r["score"],
                 "meets_threshold": r["meets_threshold"],
                 "item_id": item.id if item else None,
+                "prediction_id": r["prediction_id"],
             }
         )
 
