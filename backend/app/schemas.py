@@ -20,6 +20,7 @@ class StockInItem(BaseModel):
     final_bbox: tuple[float, float, float, float] | None = None
     annotation_status: AnnotationStatus
     prediction_id: int | None = None
+    final_instance_id: int | None = None
 
 
 class StockInRequest(BaseModel):
