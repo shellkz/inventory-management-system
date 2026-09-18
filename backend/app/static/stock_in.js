@@ -76,6 +76,7 @@
       final_item_id: r.item_id,
       status: "ok",
       selected: false,
+      prediction_id: r.prediction_id,
     }));
   }
 
@@ -131,6 +132,7 @@
       final_item_id: null,
       status: "ok",
       selected: false,
+      prediction_id: null,
     });
     candidates.forEach((c, i) => {
       c.selected = i === candidates.length - 1;
@@ -328,6 +330,7 @@
           final_item_id: c.final_item_id,
           final_bbox: finalBbox,
           annotation_status: annotationStatus,
+          prediction_id: c.prediction_id,
         };
       });
 
@@ -338,23 +341,27 @@
     submitError.hidden = true;
     submitBtn.disabled = true;
 
-    try {
-      const resp = await fetch("/stock-in", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildSubmissionPayload()),
-      });
+    // TEMP(B4 手動測試用,驗證payload結構,暫不打API): console.log payload,不送出。
+    console.log(JSON.stringify(buildSubmissionPayload(), null, 2));
+    submitBtn.disabled = false;
 
-      if (!resp.ok) {
-        const data = await resp.json();
-        throw new Error(data.error || `HTTP ${resp.status}`);
-      }
-
-      window.location.href = "/items";
-    } catch (e) {
-      submitError.textContent = `提交失敗: ${e.message}`;
-      submitError.hidden = false;
-      submitBtn.disabled = false;
-    }
+    // try {
+    //   const resp = await fetch("/stock-in", {
+    //     method: "POST",
+    //     headers: { "Content-Type": "application/json" },
+    //     body: JSON.stringify(buildSubmissionPayload()),
+    //   });
+    //
+    //   if (!resp.ok) {
+    //     const data = await resp.json();
+    //     throw new Error(data.error || `HTTP ${resp.status}`);
+    //   }
+    //
+    //   window.location.href = "/items";
+    // } catch (e) {
+    //   submitError.textContent = `提交失敗: ${e.message}`;
+    //   submitError.hidden = false;
+    //   submitBtn.disabled = false;
+    // }
   });
 })();
