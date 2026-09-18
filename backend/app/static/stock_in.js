@@ -77,6 +77,8 @@
       status: "ok",
       selected: false,
       prediction_id: r.prediction_id,
+      predicted_instance_id: r.instance_id,
+      final_instance_id: r.instance_id,
     }));
   }
 
@@ -133,6 +135,8 @@
       status: "ok",
       selected: false,
       prediction_id: null,
+      predicted_instance_id: null,
+      final_instance_id: null,
     });
     candidates.forEach((c, i) => {
       c.selected = i === candidates.length - 1;
@@ -153,7 +157,22 @@
   }
 
   function setFinalItem(index, itemId) {
-    candidates[index].final_item_id = itemId;
+    const c = candidates[index];
+    c.final_item_id = itemId;
+
+    // 換類別時,instance也要跟著換:換回原本模型猜的item就恢復原本猜的instance,
+    // 換成別的item就先預設選它底下第一個instance(通常也只有一個),多個的話UI會讓人再調整。
+    if (itemId === c.predicted_item_id) {
+      c.final_instance_id = c.predicted_instance_id;
+    } else {
+      const entry = catalog.find((e) => e.id === itemId);
+      c.final_instance_id = entry && entry.instances.length > 0 ? entry.instances[0].id : null;
+    }
+    render();
+  }
+
+  function setFinalInstance(index, instanceId) {
+    candidates[index].final_instance_id = instanceId;
     render();
   }
 
@@ -165,8 +184,11 @@
 
   function rejectCandidate(index) {
     const c = candidates[index];
-    c.final_item_id_before_reject = c.final_item_id; // 記住刪除前的選擇,復原時還原用
+    // 記住刪除前的選擇,復原時還原用
+    c.final_item_id_before_reject = c.final_item_id;
+    c.final_instance_id_before_reject = c.final_instance_id;
     c.final_item_id = null;
+    c.final_instance_id = null;
     c.status = "rejected";
     c.selected = false;
     render();
@@ -175,6 +197,7 @@
   function restoreCandidate(index) {
     const c = candidates[index];
     c.final_item_id = c.final_item_id_before_reject ?? c.predicted_item_id;
+    c.final_instance_id = c.final_instance_id_before_reject ?? c.predicted_instance_id;
     c.status = "ok";
     render();
   }
@@ -246,6 +269,25 @@
       });
 
       li.appendChild(select);
+
+      // 只有選到的item底下instance不只一個時,才需要讓人工選,大多數item只有一個instance,
+      // 直接用預設值就好,不用讓使用者多做無意義的選擇。
+      const currentEntry = catalog.find((e) => e.id === c.final_item_id);
+      if (currentEntry && currentEntry.instances.length > 1) {
+        const instanceSelect = document.createElement("select");
+        currentEntry.instances.forEach((instance) => {
+          const option = document.createElement("option");
+          option.value = instance.id;
+          option.textContent = instance.name;
+          if (instance.id === c.final_instance_id) option.selected = true;
+          instanceSelect.appendChild(option);
+        });
+        instanceSelect.addEventListener("click", (e) => e.stopPropagation());
+        instanceSelect.addEventListener("change", () => {
+          setFinalInstance(index, Number(instanceSelect.value));
+        });
+        li.appendChild(instanceSelect);
+      }
 
       // 手動新增的物件沒有 predicted_bbox,「框不準」這個概念對它沒有意義。
       if (c.predicted_bbox) {
@@ -331,6 +373,7 @@
           final_bbox: finalBbox,
           annotation_status: annotationStatus,
           prediction_id: c.prediction_id,
+          final_instance_id: c.status === "rejected" ? null : c.final_instance_id,
         };
       });
 
@@ -341,27 +384,23 @@
     submitError.hidden = true;
     submitBtn.disabled = true;
 
-    // TEMP(B4 手動測試用,驗證payload結構,暫不打API): console.log payload,不送出。
-    console.log(JSON.stringify(buildSubmissionPayload(), null, 2));
-    submitBtn.disabled = false;
+    try {
+      const resp = await fetch("/stock-in", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildSubmissionPayload()),
+      });
 
-    // try {
-    //   const resp = await fetch("/stock-in", {
-    //     method: "POST",
-    //     headers: { "Content-Type": "application/json" },
-    //     body: JSON.stringify(buildSubmissionPayload()),
-    //   });
-    //
-    //   if (!resp.ok) {
-    //     const data = await resp.json();
-    //     throw new Error(data.error || `HTTP ${resp.status}`);
-    //   }
-    //
-    //   window.location.href = "/items";
-    // } catch (e) {
-    //   submitError.textContent = `提交失敗: ${e.message}`;
-    //   submitError.hidden = false;
-    //   submitBtn.disabled = false;
-    // }
+      if (!resp.ok) {
+        const data = await resp.json();
+        throw new Error(data.error || `HTTP ${resp.status}`);
+      }
+
+      window.location.href = "/items";
+    } catch (e) {
+      submitError.textContent = `提交失敗: ${e.message}`;
+      submitError.hidden = false;
+      submitBtn.disabled = false;
+    }
   });
 })();

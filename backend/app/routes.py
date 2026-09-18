@@ -187,6 +187,8 @@ def items():
     is_json = request.accept_mimetypes.best_match(["application/json", "text/html"]) == "application/json"
 
     # instance 清單只有 JSON(給入庫審核用)才需要,HTML 頁面不用,不用多打 vision-service。
+    # 每個entity都要查(即使只有一個instance),前端改類別時才有id可以填final_instance_id;
+    # UI要不要顯示選擇畫面,交給前端自己看instances長度決定。
     instances_by_entity_id = {}
     if is_json:
         headers = {"Authorization": f"Bearer {config.VISION_API_KEY}"}
@@ -196,16 +198,15 @@ def items():
             )
             entities_resp.raise_for_status()
             for entity in entities_resp.json()["result"]:
-                if entity["instance_count"] > 1:
-                    instances_resp = requests.get(
-                        f"{config.VISION_SERVICE_URL}/v1/entities/{entity['id']}/instances",
-                        headers=headers,
-                        timeout=10,
-                    )
-                    instances_resp.raise_for_status()
-                    instances_by_entity_id[entity["id"]] = [
-                        {"id": i["id"], "name": i["name"]} for i in instances_resp.json()["result"]
-                    ]
+                instances_resp = requests.get(
+                    f"{config.VISION_SERVICE_URL}/v1/entities/{entity['id']}/instances",
+                    headers=headers,
+                    timeout=10,
+                )
+                instances_resp.raise_for_status()
+                instances_by_entity_id[entity["id"]] = [
+                    {"id": i["id"], "name": i["name"]} for i in instances_resp.json()["result"]
+                ]
         except requests.RequestException as e:
             return jsonify({"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}), 502
 
