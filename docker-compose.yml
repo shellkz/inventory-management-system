@@ -1,14 +1,14 @@
 services:
-  backend:
-    build: ./backend
+  inventory:
+    build: ./inventory
     ports:
       - "5000:5000"
     environment:
       - VISION_SERVICE_URL=${VISION_SERVICE_URL}
       - VISION_API_KEY=${VISION_API_KEY}
     volumes:
-      - ./backend_data:/app/data
-      - ./backend/alembic/versions:/app/alembic/versions
+      - ./inventory_data:/app/data
+      - ./inventory/alembic/versions:/app/alembic/versions
     depends_on:
       - vision-service
 
