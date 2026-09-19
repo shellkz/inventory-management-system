@@ -8,8 +8,9 @@ def create_app() -> Flask:
 
     app.teardown_appcontext(close_db)
 
-    from .backend.routes import main
+    from .backend.routes import blueprints
 
-    app.register_blueprint(main)
+    for bp in blueprints:
+        app.register_blueprint(bp)
 
     return app
