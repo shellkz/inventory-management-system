@@ -9,6 +9,6 @@ vision-service/
 # 模型權重(從 vision-service 的 Release 下載來的,不是這個 repo 的原始碼)
 models/
 
-# 執行期資料,vision-service/backend 各自獨立分開放,見 vision-service 自己的 .gitignore 同樣邏輯
+# 執行期資料,vision-service/inventory 各自獨立分開放,見 vision-service 自己的 .gitignore 同樣邏輯
 vision_data/
-backend_data/
+inventory_data/
