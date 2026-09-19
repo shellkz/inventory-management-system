@@ -5,13 +5,18 @@ from .. import vision_client
 from ..db import get_db
 from ..models import Item
 
-bp = Blueprint("recognize", __name__)
+bp = Blueprint(
+    "recognize",
+    __name__,
+    static_folder="../../frontend/pages/recognize",
+    static_url_path="/recognize/assets",
+)
 
 
 @bp.route("/recognize", methods=["GET", "POST"])
 def recognize():
     if request.method == "GET":
-        return render_template("recognize.html")
+        return render_template("recognize/page.html")
 
     image = request.files["image"]
     try:

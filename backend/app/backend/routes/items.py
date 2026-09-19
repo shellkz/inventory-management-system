@@ -8,7 +8,12 @@ from ..db import get_db
 from ..models import Inventory, Item
 from ..schemas import ItemCreate
 
-bp = Blueprint("items", __name__)
+bp = Blueprint(
+    "items",
+    __name__,
+    static_folder="../../frontend/pages/items",
+    static_url_path="/items/assets",
+)
 
 
 @bp.route("/catalog")
@@ -18,13 +23,13 @@ def catalog():
         entities = vision_client.get_entities()
     except requests.RequestException as e:
         return jsonify({"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}), 502
-    return render_template("_catalog.html", entities=entities)
+    return render_template("items/_catalog.html", entities=entities)
 
 
 @bp.route("/items/add", methods=["GET", "POST"])
 def add_item():
     if request.method == "GET":
-        return render_template("add_item.html")
+        return render_template("items/add_item.html")
 
     try:
         item_data = ItemCreate(
@@ -33,7 +38,7 @@ def add_item():
             min_stock=int(request.form.get("min_stock", 0)),
         )
     except (ValidationError, ValueError) as e:
-        return render_template("_add_item_error.html", message=str(e))
+        return render_template("items/_add_item_error.html", message=str(e))
 
     try:
         entity = vision_client.create_entity(item_data.name)
@@ -45,7 +50,7 @@ def add_item():
         ]
         vision_client.create_instance(entity_id, files)
     except requests.RequestException as e:
-        return render_template("_add_item_error.html", message=f"辨識服務錯誤: {e}")
+        return render_template("items/_add_item_error.html", message=f"辨識服務錯誤: {e}")
 
     db = get_db()
     item = Item(
@@ -104,4 +109,4 @@ def items():
 
     if is_json:
         return jsonify(items_view)
-    return render_template("items.html", items=items_view)
+    return render_template("items/items.html", items=items_view)

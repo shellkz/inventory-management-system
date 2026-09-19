@@ -7,13 +7,18 @@ from ..db import get_db
 from ..schemas import StockInRequest
 from ..stock_ops import process_stock_in
 
-bp = Blueprint("stock_in", __name__)
+bp = Blueprint(
+    "stock_in",
+    __name__,
+    static_folder="../../frontend/pages/stock_in",
+    static_url_path="/stock-in/assets",
+)
 
 
 @bp.route("/stock-in", methods=["GET", "POST"])
 def stock_in():
     if request.method == "GET":
-        return render_template("stock_in.html")
+        return render_template("stock_in/page.html")
 
     body = request.get_json(silent=True)
     if body is None:
