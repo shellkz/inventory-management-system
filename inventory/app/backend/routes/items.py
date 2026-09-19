@@ -109,4 +109,4 @@ def items():
 
     if is_json:
         return jsonify(items_view)
-    return render_template("items/items.html", items=items_view)
+    return render_template("items/page.html", items=items_view)
