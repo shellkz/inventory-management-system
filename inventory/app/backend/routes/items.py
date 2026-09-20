@@ -29,7 +29,7 @@ def catalog():
 @bp.route("/items/add", methods=["GET", "POST"])
 def add_item():
     if request.method == "GET":
-        return render_template("items/add_item.html")
+        return render_template("items/add/page.html")
 
     try:
         item_data = ItemCreate(
@@ -38,7 +38,7 @@ def add_item():
             min_stock=int(request.form.get("min_stock", 0)),
         )
     except (ValidationError, ValueError) as e:
-        return render_template("items/_add_item_error.html", message=str(e))
+        return render_template("items/add/_error.html", message=str(e))
 
     try:
         entity = vision_client.create_entity(item_data.name)
@@ -50,7 +50,7 @@ def add_item():
         ]
         vision_client.create_instance(entity_id, files)
     except requests.RequestException as e:
-        return render_template("items/_add_item_error.html", message=f"辨識服務錯誤: {e}")
+        return render_template("items/add/_error.html", message=f"辨識服務錯誤: {e}")
 
     db = get_db()
     item = Item(
