@@ -6,7 +6,7 @@ from sqlalchemy import select
 from .. import vision_client
 from ..db import get_db
 from ..models import Inventory, Item
-from ..schemas import ItemCreate
+from ..schemas import ItemCreate, ItemUpdate
 
 bp = Blueprint(
     "items",
@@ -22,7 +22,9 @@ def catalog():
     try:
         entities = vision_client.get_entities()
     except requests.RequestException as e:
-        return jsonify({"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}), 502
+        return jsonify(
+            {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
+        ), 502
     return render_template("items/_catalog.html", entities=entities)
 
 
@@ -73,10 +75,15 @@ def add_item():
 def items():
     db = get_db()
     rows = db.execute(
-        select(Item, Inventory.quantity).outerjoin(Inventory, Item.id == Inventory.item_id)
+        select(Item, Inventory.quantity).outerjoin(
+            Inventory, Item.id == Inventory.item_id
+        )
     ).all()
 
-    is_json = request.accept_mimetypes.best_match(["application/json", "text/html"]) == "application/json"
+    is_json = (
+        request.accept_mimetypes.best_match(["application/json", "text/html"])
+        == "application/json"
+    )
 
     # instance 清單只有 JSON(給入庫審核用)才需要,HTML 頁面不用,不用多打 vision-service。
     # 每個entity都要查(即使只有一個instance),前端改類別時才有id可以填final_instance_id;
@@ -90,7 +97,9 @@ def items():
                     {"id": i["id"], "name": i["name"]} for i in instances
                 ]
         except requests.RequestException as e:
-            return jsonify({"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}), 502
+            return jsonify(
+                {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
+            ), 502
 
     items_view = []
     for item, quantity in rows:
@@ -104,9 +113,35 @@ def items():
             "is_low": quantity < item.min_stock,
         }
         if is_json:
-            entry["instances"] = instances_by_entity_id.get(item.recognition_entity_id, [])
+            entry["instances"] = instances_by_entity_id.get(
+                item.recognition_entity_id, []
+            )
         items_view.append(entry)
 
     if is_json:
         return jsonify(items_view)
     return render_template("items/page.html", items=items_view)
+
+
+@bp.route("/items/<int:item_id>", methods=["GET", "PATCH"])
+def item_detail(item_id):
+    db = get_db()
+    item = db.get(Item, item_id)
+
+    if request.method == "PATCH":
+        body = request.get_json(silent=True)
+        if body is None:
+            return jsonify({"error": "invalid_json", "message": "request body 不是合法的 JSON"}), 400
+        try:
+            update = ItemUpdate.model_validate(body)
+        except ValidationError as e:
+            return jsonify({"error": "validation_error", "details": e.errors()}), 422
+        item.min_stock = update.min_stock
+        db.commit()
+        return jsonify({"id": item.id, "min_stock": item.min_stock})
+
+    try:
+        instances = vision_client.get_instances(item.recognition_entity_id)
+    except requests.RequestException as e:
+        return jsonify({"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}), 502
+    return render_template("items/[id]/page.html", item=item, instances=instances)

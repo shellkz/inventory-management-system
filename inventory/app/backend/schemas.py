@@ -12,6 +12,10 @@ class ItemCreate(BaseModel):
     min_stock: int = 0
 
 
+class ItemUpdate(BaseModel):
+    min_stock: int
+
+
 class StockInItem(BaseModel):
     source: Source
     predicted_class: str | None = None
