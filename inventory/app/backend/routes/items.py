@@ -131,7 +131,9 @@ def item_detail(item_id):
     if request.method == "PATCH":
         body = request.get_json(silent=True)
         if body is None:
-            return jsonify({"error": "invalid_json", "message": "request body 不是合法的 JSON"}), 400
+            return jsonify(
+                {"error": "invalid_json", "message": "request body 不是合法的 JSON"}
+            ), 400
         try:
             update = ItemUpdate.model_validate(body)
         except ValidationError as e:
@@ -143,5 +145,7 @@ def item_detail(item_id):
     try:
         instances = vision_client.get_instances(item.recognition_entity_id)
     except requests.RequestException as e:
-        return jsonify({"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}), 502
+        return jsonify(
+            {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
+        ), 502
     return render_template("items/[id]/page.html", item=item, instances=instances)
