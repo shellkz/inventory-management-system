@@ -71,3 +71,24 @@ def patch_prediction(prediction_id, final_instance_id, final_bbox):
     )
     resp.raise_for_status()
     return resp.json()
+
+
+def get_samples(instance_id):
+    resp = requests.get(
+        f"{config.VISION_SERVICE_URL}/v1/instances/{instance_id}/samples",
+        headers=_headers(),
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return resp.json()["result"]
+
+
+def get_sample_image(sample_id):
+    """圖片是binary,不是JSON,回傳(bytes, content-type)給呼叫端自己組Response。"""
+    resp = requests.get(
+        f"{config.VISION_SERVICE_URL}/v1/samples/{sample_id}/image",
+        headers=_headers(),
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return resp.content, resp.headers.get("Content-Type", "image/jpeg")

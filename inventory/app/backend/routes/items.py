@@ -1,5 +1,5 @@
 import requests
-from flask import Blueprint, jsonify, make_response, render_template, request, url_for
+from flask import Blueprint, Response, jsonify, make_response, render_template, request, url_for
 from pydantic import ValidationError
 from sqlalchemy import select
 
@@ -123,7 +123,7 @@ def items():
     return render_template("items/page.html", items=items_view)
 
 
-@bp.route("/items/<int:item_id>", methods=["GET", "PATCH"])
+@bp.route("/items/edit/<int:item_id>", methods=["GET", "PATCH"])
 def item_detail(item_id):
     db = get_db()
     item = db.get(Item, item_id)
@@ -148,4 +148,30 @@ def item_detail(item_id):
         return jsonify(
             {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
         ), 502
-    return render_template("items/[id]/page.html", item=item, instances=instances)
+    return render_template("items/edit/[id]/page.html", item=item, instances=instances)
+
+
+@bp.route("/items/edit/<int:item_id>/samples")
+def item_samples(item_id):
+    """不討論多instance:固定拿該物品entity底下第一個instance的樣本清單。"""
+    db = get_db()
+    item = db.get(Item, item_id)
+    try:
+        instances = vision_client.get_instances(item.recognition_entity_id)
+        samples = vision_client.get_samples(instances[0]["id"])
+    except requests.RequestException as e:
+        return jsonify(
+            {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
+        ), 502
+    return jsonify(samples)
+
+
+@bp.route("/items/edit/<int:item_id>/samples/<int:sample_id>/image")
+def item_sample_image(item_id, sample_id):
+    try:
+        content, content_type = vision_client.get_sample_image(sample_id)
+    except requests.RequestException as e:
+        return jsonify(
+            {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
+        ), 502
+    return Response(content, mimetype=content_type)
