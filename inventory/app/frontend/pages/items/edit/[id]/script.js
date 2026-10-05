@@ -29,6 +29,9 @@
 
     container.innerHTML = "";
     for (const sample of samples) {
+      const row = document.createElement("div");
+      row.className = "sample-item";
+
       const photo = document.createElement("div");
       photo.className = "sample-photo";
 
@@ -49,8 +52,31 @@
 
       photo.appendChild(img);
       photo.appendChild(box);
-      container.appendChild(photo);
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.type = "button";
+      deleteBtn.className = "btn btn-secondary";
+      deleteBtn.textContent = "刪除";
+      deleteBtn.addEventListener("click", () => deleteSample(itemId, sample.id));
+
+      row.appendChild(photo);
+      row.appendChild(deleteBtn);
+      container.appendChild(row);
     }
+  }
+
+  async function deleteSample(itemId, sampleId) {
+    const resp = await fetch(`/items/edit/${itemId}/samples/${sampleId}`, {
+      method: "DELETE",
+    });
+
+    if (!resp.ok) {
+      const data = await resp.json();
+      alert(`刪除樣本失敗: ${data.message || resp.status}`);
+      return;
+    }
+
+    loadSamples();
   }
 
   loadSamples();

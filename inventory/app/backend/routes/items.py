@@ -191,3 +191,14 @@ def item_sample_image(item_id, sample_id):
             {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
         ), 502
     return Response(content, mimetype=content_type)
+
+
+@bp.route("/items/edit/<int:item_id>/samples/<int:sample_id>", methods=["DELETE"])
+def item_sample_delete(item_id, sample_id):
+    try:
+        vision_client.delete_sample(sample_id)
+    except requests.RequestException as e:
+        return jsonify(
+            {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
+        ), 502
+    return "", 204

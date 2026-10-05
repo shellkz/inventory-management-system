@@ -209,6 +209,12 @@ a {
   gap: 12px;
 }
 
+.sample-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .sample-photo {
   position: relative;
   width: 240px;

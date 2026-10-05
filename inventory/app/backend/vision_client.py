@@ -94,6 +94,15 @@ def get_samples(instance_id):
     return resp.json()["result"]
 
 
+def delete_sample(sample_id):
+    resp = requests.delete(
+        f"{config.VISION_SERVICE_URL}/v1/samples/{sample_id}",
+        headers=_headers(),
+        timeout=10,
+    )
+    resp.raise_for_status()
+
+
 def get_sample_image(sample_id):
     """圖片是binary,不是JSON,回傳(bytes, content-type)給呼叫端自己組Response。"""
     resp = requests.get(
