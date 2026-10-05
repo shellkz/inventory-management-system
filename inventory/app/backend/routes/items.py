@@ -138,9 +138,10 @@ def item_detail(item_id):
             update = ItemUpdate.model_validate(body)
         except ValidationError as e:
             return jsonify({"error": "validation_error", "details": e.errors()}), 422
+        item.name = update.name
         item.min_stock = update.min_stock
         db.commit()
-        return jsonify({"id": item.id, "min_stock": item.min_stock})
+        return jsonify({"id": item.id, "name": item.name, "min_stock": item.min_stock})
 
     try:
         instances = vision_client.get_instances(item.recognition_entity_id)

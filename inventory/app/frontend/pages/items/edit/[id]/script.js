@@ -1,5 +1,6 @@
 (function () {
   const saveBtn = document.getElementById("save-btn");
+  const nameInput = document.getElementById("name");
   const minStockInput = document.getElementById("min_stock");
 
   saveBtn.addEventListener("click", async () => {
@@ -8,7 +9,7 @@
     const resp = await fetch(`/items/edit/${itemId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ min_stock: Number(minStockInput.value) }),
+      body: JSON.stringify({ name: nameInput.value, min_stock: Number(minStockInput.value) }),
     });
 
     if (!resp.ok) {
