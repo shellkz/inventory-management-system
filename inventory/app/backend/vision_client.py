@@ -73,6 +73,17 @@ def patch_prediction(prediction_id, final_instance_id, final_bbox):
     return resp.json()
 
 
+def add_sample(instance_id, image):
+    resp = requests.post(
+        f"{config.VISION_SERVICE_URL}/v1/instances/{instance_id}/samples",
+        files={"image": (image.filename, image.stream, image.mimetype)},
+        headers=_headers(),
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
 def get_samples(instance_id):
     resp = requests.get(
         f"{config.VISION_SERVICE_URL}/v1/instances/{instance_id}/samples",

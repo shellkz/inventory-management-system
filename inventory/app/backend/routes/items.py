@@ -151,11 +151,27 @@ def item_detail(item_id):
     return render_template("items/edit/[id]/page.html", item=item, instances=instances)
 
 
-@bp.route("/items/edit/<int:item_id>/samples")
+@bp.route("/items/edit/<int:item_id>/samples", methods=["GET", "POST"])
 def item_samples(item_id):
     """不討論多instance:固定拿該物品entity底下第一個instance的樣本清單。"""
     db = get_db()
     item = db.get(Item, item_id)
+
+    if request.method == "POST":
+        image = request.files.get("image")
+        if image is None:
+            return jsonify(
+                {"error": "invalid_request", "message": "缺少image欄位"}
+            ), 400
+        try:
+            instances = vision_client.get_instances(item.recognition_entity_id)
+            sample = vision_client.add_sample(instances[0]["id"], image)
+        except requests.RequestException as e:
+            return jsonify(
+                {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
+            ), 502
+        return jsonify(sample), 201
+
     try:
         instances = vision_client.get_instances(item.recognition_entity_id)
         samples = vision_client.get_samples(instances[0]["id"])

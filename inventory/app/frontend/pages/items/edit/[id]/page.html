@@ -12,5 +12,8 @@
   <h2>樣本</h2>
   <section id="samples" class="sample-grid" data-item-id="{{ item.id }}"></section>
 
+  <button type="button" class="btn btn-secondary" id="add-sample-btn">新增樣本</button>
+  <input type="file" id="sample-camera-input" accept="image/*" capture="environment" hidden>
+
   <script src="{{ url_for('items.static', filename='edit/[id]/script.js') }}"></script>
 {% endblock %}

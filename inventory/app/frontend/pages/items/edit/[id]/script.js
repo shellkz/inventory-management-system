@@ -54,4 +54,32 @@
   }
 
   loadSamples();
+
+  const addSampleBtn = document.getElementById("add-sample-btn");
+  const sampleCameraInput = document.getElementById("sample-camera-input");
+
+  addSampleBtn.addEventListener("click", () => sampleCameraInput.click());
+
+  sampleCameraInput.addEventListener("change", async () => {
+    const file = sampleCameraInput.files[0];
+    if (!file) return;
+
+    const itemId = document.getElementById("samples").dataset.itemId;
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const resp = await fetch(`/items/edit/${itemId}/samples`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!resp.ok) {
+      const data = await resp.json();
+      alert(`新增樣本失敗: ${data.message || resp.status}`);
+      return;
+    }
+
+    location.reload();
+  });
 })();
