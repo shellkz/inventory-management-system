@@ -13,7 +13,12 @@ class ItemCreate(BaseModel):
 
 
 class ItemUpdate(BaseModel):
+    name: str
     min_stock: int
+
+
+class SampleBboxPatch(BaseModel):
+    bbox: tuple[float, float, float, float]
 
 
 class StockInItem(BaseModel):

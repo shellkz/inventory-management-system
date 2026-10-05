@@ -232,6 +232,14 @@ a {
   box-sizing: border-box;
 }
 
+.sample-bbox--preview {
+  border-style: dashed;
+}
+
+.sample-photo--editing {
+  cursor: crosshair;
+}
+
 .photo-widget {
   border-top: 1px solid var(--color-border);
   padding-top: var(--spacing);

@@ -94,6 +94,17 @@ def get_samples(instance_id):
     return resp.json()["result"]
 
 
+def recrop_sample(sample_id, bbox):
+    resp = requests.patch(
+        f"{config.VISION_SERVICE_URL}/v1/samples/{sample_id}",
+        json={"bbox": bbox},
+        headers=_headers(),
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
 def delete_sample(sample_id):
     resp = requests.delete(
         f"{config.VISION_SERVICE_URL}/v1/samples/{sample_id}",

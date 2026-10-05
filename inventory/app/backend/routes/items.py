@@ -6,7 +6,7 @@ from sqlalchemy import select
 from .. import vision_client
 from ..db import get_db
 from ..models import Inventory, Item
-from ..schemas import ItemCreate, ItemUpdate
+from ..schemas import ItemCreate, ItemUpdate, SampleBboxPatch
 
 bp = Blueprint(
     "items",
@@ -193,8 +193,26 @@ def item_sample_image(item_id, sample_id):
     return Response(content, mimetype=content_type)
 
 
-@bp.route("/items/edit/<int:item_id>/samples/<int:sample_id>", methods=["DELETE"])
-def item_sample_delete(item_id, sample_id):
+@bp.route("/items/edit/<int:item_id>/samples/<int:sample_id>", methods=["PATCH", "DELETE"])
+def item_sample_detail(item_id, sample_id):
+    if request.method == "PATCH":
+        body = request.get_json(silent=True)
+        if body is None:
+            return jsonify(
+                {"error": "invalid_json", "message": "request body 不是合法的 JSON"}
+            ), 400
+        try:
+            update = SampleBboxPatch.model_validate(body)
+        except ValidationError as e:
+            return jsonify({"error": "validation_error", "details": e.errors()}), 422
+        try:
+            sample = vision_client.recrop_sample(sample_id, list(update.bbox))
+        except requests.RequestException as e:
+            return jsonify(
+                {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
+            ), 502
+        return jsonify(sample)
+
     try:
         vision_client.delete_sample(sample_id)
     except requests.RequestException as e:
