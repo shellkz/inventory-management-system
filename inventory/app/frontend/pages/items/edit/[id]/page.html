@@ -9,5 +9,8 @@
     <button type="button" class="btn btn-primary" id="save-btn" data-item-id="{{ item.id }}">提交</button>
   </div>
 
+  <h2>樣本</h2>
+  <section id="samples" class="sample-grid" data-item-id="{{ item.id }}"></section>
+
   <script src="{{ url_for('items.static', filename='edit/[id]/script.js') }}"></script>
 {% endblock %}
