@@ -71,3 +71,55 @@ def patch_prediction(prediction_id, final_instance_id, final_bbox):
     )
     resp.raise_for_status()
     return resp.json()
+
+
+def add_sample(instance_id, image):
+    resp = requests.post(
+        f"{config.VISION_SERVICE_URL}/v1/instances/{instance_id}/samples",
+        files={"image": (image.filename, image.stream, image.mimetype)},
+        headers=_headers(),
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_samples(instance_id):
+    resp = requests.get(
+        f"{config.VISION_SERVICE_URL}/v1/instances/{instance_id}/samples",
+        headers=_headers(),
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return resp.json()["result"]
+
+
+def recrop_sample(sample_id, bbox):
+    resp = requests.patch(
+        f"{config.VISION_SERVICE_URL}/v1/samples/{sample_id}",
+        json={"bbox": bbox},
+        headers=_headers(),
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def delete_sample(sample_id):
+    resp = requests.delete(
+        f"{config.VISION_SERVICE_URL}/v1/samples/{sample_id}",
+        headers=_headers(),
+        timeout=10,
+    )
+    resp.raise_for_status()
+
+
+def get_sample_image(sample_id):
+    """圖片是binary,不是JSON,回傳(bytes, content-type)給呼叫端自己組Response。"""
+    resp = requests.get(
+        f"{config.VISION_SERVICE_URL}/v1/samples/{sample_id}/image",
+        headers=_headers(),
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return resp.content, resp.headers.get("Content-Type", "image/jpeg")

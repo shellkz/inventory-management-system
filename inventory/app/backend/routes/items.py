@@ -1,12 +1,12 @@
 import requests
-from flask import Blueprint, jsonify, make_response, render_template, request, url_for
+from flask import Blueprint, Response, jsonify, make_response, render_template, request, url_for
 from pydantic import ValidationError
 from sqlalchemy import select
 
 from .. import vision_client
 from ..db import get_db
 from ..models import Inventory, Item
-from ..schemas import ItemCreate, ItemUpdate
+from ..schemas import ItemCreate, ItemUpdate, SampleBboxPatch
 
 bp = Blueprint(
     "items",
@@ -123,7 +123,7 @@ def items():
     return render_template("items/page.html", items=items_view)
 
 
-@bp.route("/items/<int:item_id>", methods=["GET", "PATCH"])
+@bp.route("/items/edit/<int:item_id>", methods=["GET", "PATCH"])
 def item_detail(item_id):
     db = get_db()
     item = db.get(Item, item_id)
@@ -138,9 +138,10 @@ def item_detail(item_id):
             update = ItemUpdate.model_validate(body)
         except ValidationError as e:
             return jsonify({"error": "validation_error", "details": e.errors()}), 422
+        item.name = update.name
         item.min_stock = update.min_stock
         db.commit()
-        return jsonify({"id": item.id, "min_stock": item.min_stock})
+        return jsonify({"id": item.id, "name": item.name, "min_stock": item.min_stock})
 
     try:
         instances = vision_client.get_instances(item.recognition_entity_id)
@@ -148,4 +149,75 @@ def item_detail(item_id):
         return jsonify(
             {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
         ), 502
-    return render_template("items/[id]/page.html", item=item, instances=instances)
+    return render_template("items/edit/[id]/page.html", item=item, instances=instances)
+
+
+@bp.route("/items/edit/<int:item_id>/samples", methods=["GET", "POST"])
+def item_samples(item_id):
+    """不討論多instance:固定拿該物品entity底下第一個instance的樣本清單。"""
+    db = get_db()
+    item = db.get(Item, item_id)
+
+    if request.method == "POST":
+        image = request.files.get("image")
+        if image is None:
+            return jsonify(
+                {"error": "invalid_request", "message": "缺少image欄位"}
+            ), 400
+        try:
+            instances = vision_client.get_instances(item.recognition_entity_id)
+            sample = vision_client.add_sample(instances[0]["id"], image)
+        except requests.RequestException as e:
+            return jsonify(
+                {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
+            ), 502
+        return jsonify(sample), 201
+
+    try:
+        instances = vision_client.get_instances(item.recognition_entity_id)
+        samples = vision_client.get_samples(instances[0]["id"])
+    except requests.RequestException as e:
+        return jsonify(
+            {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
+        ), 502
+    return jsonify(samples)
+
+
+@bp.route("/items/edit/<int:item_id>/samples/<int:sample_id>/image")
+def item_sample_image(item_id, sample_id):
+    try:
+        content, content_type = vision_client.get_sample_image(sample_id)
+    except requests.RequestException as e:
+        return jsonify(
+            {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
+        ), 502
+    return Response(content, mimetype=content_type)
+
+
+@bp.route("/items/edit/<int:item_id>/samples/<int:sample_id>", methods=["PATCH", "DELETE"])
+def item_sample_detail(item_id, sample_id):
+    if request.method == "PATCH":
+        body = request.get_json(silent=True)
+        if body is None:
+            return jsonify(
+                {"error": "invalid_json", "message": "request body 不是合法的 JSON"}
+            ), 400
+        try:
+            update = SampleBboxPatch.model_validate(body)
+        except ValidationError as e:
+            return jsonify({"error": "validation_error", "details": e.errors()}), 422
+        try:
+            sample = vision_client.recrop_sample(sample_id, list(update.bbox))
+        except requests.RequestException as e:
+            return jsonify(
+                {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
+            ), 502
+        return jsonify(sample)
+
+    try:
+        vision_client.delete_sample(sample_id)
+    except requests.RequestException as e:
+        return jsonify(
+            {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
+        ), 502
+    return "", 204

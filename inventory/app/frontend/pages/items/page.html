@@ -18,6 +18,7 @@
       <div class="item-row__meta">
         數量 {{ item.quantity }}
         {% if item.is_low %}<span class="badge badge--warning">⚠ 低於下限 {{ item.min_stock }}</span>{% endif %}
+        <a class="btn" href="/items/edit/{{ item.id }}">修改</a>
       </div>
     </li>
     {% else %}

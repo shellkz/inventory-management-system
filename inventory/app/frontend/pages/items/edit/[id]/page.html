@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}物品設定{% endblock %}
+{% block content %}
+  <div class="field-list">
+    <div class="field-row">
+      <label for="name">名稱</label>
+      <input type="text" id="name" name="name" value="{{ item.name }}">
+    </div>
+    <div class="field-row">
+      <label for="min_stock">最低庫存</label>
+      <input type="number" id="min_stock" name="min_stock" min="0" value="{{ item.min_stock }}">
+    </div>
+    <button type="button" class="btn btn-primary" id="save-btn" data-item-id="{{ item.id }}">提交</button>
+  </div>
+
+  <h2>樣本</h2>
+  <section id="samples" class="sample-grid" data-item-id="{{ item.id }}"></section>
+
+  <button type="button" class="btn btn-secondary" id="add-sample-btn">新增樣本</button>
+  <input type="file" id="sample-camera-input" accept="image/*" capture="environment" hidden>
+
+  <script src="{{ url_for('items.static', filename='edit/[id]/script.js') }}"></script>
+{% endblock %}
