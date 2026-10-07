@@ -74,11 +74,14 @@ def add_item():
 @bp.route("/items")
 def items():
     db = get_db()
-    rows = db.execute(
-        select(Item, Inventory.quantity).outerjoin(
-            Inventory, Item.id == Inventory.item_id
-        )
-    ).all()
+    include_deleted = request.args.get("include_deleted", "false").lower() == "true"
+
+    query = select(Item, Inventory.quantity).outerjoin(
+        Inventory, Item.id == Inventory.item_id
+    )
+    if not include_deleted:
+        query = query.where(Item.is_deleted.is_(False))
+    rows = db.execute(query).all()
 
     is_json = (
         request.accept_mimetypes.best_match(["application/json", "text/html"])
@@ -111,6 +114,7 @@ def items():
             "quantity": quantity,
             "min_stock": item.min_stock,
             "is_low": quantity < item.min_stock,
+            "is_deleted": item.is_deleted,
         }
         if is_json:
             entry["instances"] = instances_by_entity_id.get(
@@ -120,7 +124,24 @@ def items():
 
     if is_json:
         return jsonify(items_view)
-    return render_template("items/page.html", items=items_view)
+    return render_template("items/page.html", items=items_view, include_deleted=include_deleted)
+
+
+@bp.route("/items/<int:item_id>", methods=["DELETE"])
+def item_delete(item_id):
+    db = get_db()
+    item = db.get(Item, item_id)
+
+    try:
+        vision_client.delete_entity(item.recognition_entity_id)
+    except requests.RequestException as e:
+        return jsonify(
+            {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
+        ), 502
+
+    item.is_deleted = True
+    db.commit()
+    return "", 204
 
 
 @bp.route("/items/edit/<int:item_id>", methods=["GET", "PATCH"])

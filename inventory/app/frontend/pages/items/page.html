@@ -8,21 +8,33 @@
     <a class="btn btn-primary" href="/items/add">新增物品</a>
   </div>
 
+  {% if include_deleted %}
+  <a class="btn" href="/items">隱藏已刪除物品</a>
+  {% else %}
+  <a class="btn" href="/items?include_deleted=true">顯示已刪除物品</a>
+  {% endif %}
+
   <ul class="item-list">
     {% for item in items %}
     <li class="item-row{% if item.is_low %} item-row--low{% endif %}">
       <div class="item-row__main">
         <span class="item-row__name">{{ item.name }}</span>
         {% if item.category %}<span class="badge">{{ item.category }}</span>{% endif %}
+        {% if item.is_deleted %}<span class="badge badge--warning">已刪除</span>{% endif %}
       </div>
       <div class="item-row__meta">
         數量 {{ item.quantity }}
         {% if item.is_low %}<span class="badge badge--warning">⚠ 低於下限 {{ item.min_stock }}</span>{% endif %}
+        {% if not item.is_deleted %}
         <a class="btn" href="/items/edit/{{ item.id }}">修改</a>
+        <button type="button" class="btn btn-secondary delete-item-btn" data-item-id="{{ item.id }}" data-item-name="{{ item.name }}">✕</button>
+        {% endif %}
       </div>
     </li>
     {% else %}
     <li class="empty-state">目前沒有任何物品</li>
     {% endfor %}
   </ul>
+
+  <script src="{{ url_for('items.static', filename='script.js') }}"></script>
 {% endblock %}
