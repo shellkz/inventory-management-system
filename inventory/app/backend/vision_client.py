@@ -40,6 +40,15 @@ def create_entity(name):
     return resp.json()
 
 
+def delete_entity(entity_id):
+    resp = requests.delete(
+        f"{config.VISION_SERVICE_URL}/v1/entities/{entity_id}",
+        headers=_headers(),
+        timeout=10,
+    )
+    resp.raise_for_status()
+
+
 def create_instance(entity_id, files):
     resp = requests.post(
         f"{config.VISION_SERVICE_URL}/v1/entities/{entity_id}/instances",
