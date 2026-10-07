@@ -123,6 +123,23 @@ def items():
     return render_template("items/page.html", items=items_view)
 
 
+@bp.route("/items/<int:item_id>", methods=["DELETE"])
+def item_delete(item_id):
+    db = get_db()
+    item = db.get(Item, item_id)
+
+    try:
+        vision_client.delete_entity(item.recognition_entity_id)
+    except requests.RequestException as e:
+        return jsonify(
+            {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
+        ), 502
+
+    item.is_deleted = True
+    db.commit()
+    return "", 204
+
+
 @bp.route("/items/edit/<int:item_id>", methods=["GET", "PATCH"])
 def item_detail(item_id):
     db = get_db()
