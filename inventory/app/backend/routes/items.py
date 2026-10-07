@@ -124,7 +124,7 @@ def items():
 
     if is_json:
         return jsonify(items_view)
-    return render_template("items/page.html", items=items_view)
+    return render_template("items/page.html", items=items_view, include_deleted=include_deleted)
 
 
 @bp.route("/items/<int:item_id>", methods=["DELETE"])
