@@ -19,10 +19,13 @@
         數量 {{ item.quantity }}
         {% if item.is_low %}<span class="badge badge--warning">⚠ 低於下限 {{ item.min_stock }}</span>{% endif %}
         <a class="btn" href="/items/edit/{{ item.id }}">修改</a>
+        <button type="button" class="btn btn-secondary delete-item-btn" data-item-id="{{ item.id }}" data-item-name="{{ item.name }}">✕</button>
       </div>
     </li>
     {% else %}
     <li class="empty-state">目前沒有任何物品</li>
     {% endfor %}
   </ul>
+
+  <script src="{{ url_for('items.static', filename='script.js') }}"></script>
 {% endblock %}
