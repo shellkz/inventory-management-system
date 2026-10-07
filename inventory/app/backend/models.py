@@ -8,6 +8,7 @@
 import enum
 
 from sqlalchemy import (
+    Boolean,
     Column,
     DateTime,
     Enum,
@@ -55,6 +56,7 @@ class Item(Base):
     min_stock = Column(Integer, nullable=False, default=0)
     # 對應 vision-service 的 recognition_entities.id,跨系統參照,不是真的 FK
     recognition_entity_id = Column(Integer, nullable=True)
+    is_deleted = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
