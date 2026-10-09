@@ -1,6 +1,7 @@
 """處理一次入庫/出庫提交:寫入異動紀錄/明細,更新庫存數量。"""
 from collections import Counter
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .models import Inventory, StockTransaction, StockTransactionItem, TransactionType
@@ -41,6 +42,36 @@ def process_stock_in(db: Session, payload: StockInRequest) -> StockTransaction:
     db.commit()
     db.refresh(transaction)
     return transaction
+
+
+def get_item_history(db: Session, item_id: int):
+    """依transaction分組,算出每次入/出庫對這個item的數量變化。一次異動裡同個item
+    對應多筆StockTransactionItem(每筆代表一個單位),所以用count()合計成一個數字。
+    """
+    rows = (
+        db.query(
+            StockTransaction.id,
+            StockTransaction.type,
+            StockTransaction.operator_id,
+            StockTransaction.created_at,
+            func.count(StockTransactionItem.id).label("count"),
+        )
+        .join(StockTransactionItem, StockTransactionItem.transaction_id == StockTransaction.id)
+        .filter(StockTransactionItem.final_item_id == item_id)
+        .group_by(StockTransaction.id)
+        .order_by(StockTransaction.created_at.desc())
+        .all()
+    )
+    return [
+        {
+            "transaction_id": r.id,
+            "type": r.type.value,
+            "quantity_change": r.count if r.type == TransactionType.IN else -r.count,
+            "operator_id": r.operator_id,
+            "created_at": r.created_at,
+        }
+        for r in rows
+    ]
 
 
 def process_stock_out(db: Session, payload: StockInRequest) -> StockTransaction:
