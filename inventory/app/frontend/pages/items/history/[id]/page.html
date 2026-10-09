@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}庫存異動紀錄{% endblock %}
+
+{% block content %}
+  <h1>{{ item.name }} 的庫存異動紀錄</h1>
+
+  <ul class="item-list">
+    {% for entry in history %}
+    <li class="item-row">
+      <div class="item-row__main">
+        <span class="item-row__name">{{ entry.created_at }}</span>
+        <span class="badge">{{ "入庫" if entry.type == "in" else "出庫" }}</span>
+      </div>
+      <div class="item-row__meta">
+        數量變化 {{ "+%d"|format(entry.quantity_change) if entry.quantity_change > 0 else entry.quantity_change }}
+      </div>
+    </li>
+    {% else %}
+    <li class="empty-state">目前沒有任何異動紀錄</li>
+    {% endfor %}
+  </ul>
+{% endblock %}

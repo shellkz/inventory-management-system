@@ -25,6 +25,7 @@
       <div class="item-row__meta">
         數量 {{ item.quantity }}
         {% if item.is_low %}<span class="badge badge--warning">⚠ 低於下限 {{ item.min_stock }}</span>{% endif %}
+        <a class="btn" href="/items/history/{{ item.id }}">紀錄</a>
         {% if not item.is_deleted %}
         <a class="btn" href="/items/edit/{{ item.id }}">修改</a>
         <button type="button" class="btn btn-secondary delete-item-btn" data-item-id="{{ item.id }}" data-item-name="{{ item.name }}">✕</button>

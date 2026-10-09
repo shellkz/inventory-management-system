@@ -7,6 +7,7 @@ from .. import vision_client
 from ..db import get_db
 from ..models import Inventory, Item
 from ..schemas import ItemCreate, ItemUpdate, SampleBboxPatch
+from ..stock_ops import get_item_history
 
 bp = Blueprint(
     "items",
@@ -171,6 +172,14 @@ def item_detail(item_id):
             {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
         ), 502
     return render_template("items/edit/[id]/page.html", item=item, instances=instances)
+
+
+@bp.route("/items/history/<int:item_id>")
+def item_history(item_id):
+    db = get_db()
+    item = db.get(Item, item_id)
+    history = get_item_history(db, item_id)
+    return render_template("items/history/[id]/page.html", item=item, history=history)
 
 
 @bp.route("/items/edit/<int:item_id>/samples", methods=["GET", "POST"])
