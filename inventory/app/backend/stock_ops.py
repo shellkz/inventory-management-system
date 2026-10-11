@@ -51,7 +51,7 @@ def process_stocktake(db: Session, payload: StocktakeRequest) -> StockTransactio
     """
     counted = sum(1 for item in payload.items if item.final_item_id == payload.item_id)
 
-    transaction = StockTransaction(type=TransactionType.STOCKTAKE)
+    transaction = StockTransaction(type=TransactionType.STOCKTAKE, target_item_id=payload.item_id)
     db.add(transaction)
     db.flush()  # 取得 transaction.id
 
@@ -75,10 +75,18 @@ def process_stocktake(db: Session, payload: StocktakeRequest) -> StockTransactio
 
 
 def get_item_history(db: Session, item_id: int):
-    """依transaction分組,算出每次入/出庫對這個item的數量變化。一次異動裡同個item
-    對應多筆StockTransactionItem(每筆代表一個單位),所以用count()合計成一個數字。
+    """依transaction分組,算出每次入/出庫/盤點對這個item的狀態。
+
+    入庫/出庫:每筆StockTransactionItem.final_item_id各自獨立成立,直接用它篩+算delta。
+
+    盤點不能用同一套篩法:目標物品記在StockTransaction.target_item_id,不是
+    final_item_id——盤點時誤入鏡頭、被改成別的item的candidate也會寫進
+    StockTransactionItem,不代表這個item被盤點了(否則會把這次盤點誤算進那個
+    不相關item的歷史)。而且盤到0個時,根本不會有任何final_item_id=item_id的明細,
+    用inner join只篩final_item_id會直接漏掉這筆,所以用target_item_id篩交易、
+    LEFT JOIN數符合final_item_id的筆數(可能是0)。
     """
-    rows = (
+    in_out_rows = (
         db.query(
             StockTransaction.id,
             StockTransaction.type,
@@ -88,12 +96,32 @@ def get_item_history(db: Session, item_id: int):
         )
         .join(StockTransactionItem, StockTransactionItem.transaction_id == StockTransaction.id)
         .filter(StockTransactionItem.final_item_id == item_id)
+        .filter(StockTransaction.type != TransactionType.STOCKTAKE)
         .group_by(StockTransaction.id)
-        .order_by(StockTransaction.created_at.desc())
         .all()
     )
+
+    stocktake_rows = (
+        db.query(
+            StockTransaction.id,
+            StockTransaction.type,
+            StockTransaction.operator_id,
+            StockTransaction.created_at,
+            func.count(StockTransactionItem.id).label("count"),
+        )
+        .outerjoin(
+            StockTransactionItem,
+            (StockTransactionItem.transaction_id == StockTransaction.id)
+            & (StockTransactionItem.final_item_id == item_id),
+        )
+        .filter(StockTransaction.type == TransactionType.STOCKTAKE)
+        .filter(StockTransaction.target_item_id == item_id)
+        .group_by(StockTransaction.id)
+        .all()
+    )
+
     result = []
-    for r in rows:
+    for r in list(in_out_rows) + list(stocktake_rows):
         entry = {
             "transaction_id": r.id,
             "type": r.type.value,
@@ -107,6 +135,8 @@ def get_item_history(db: Session, item_id: int):
         else:  # STOCKTAKE:SET語意,顯示盤點後的絕對數量,不是變化量
             entry["quantity_after"] = r.count
         result.append(entry)
+
+    result.sort(key=lambda e: e["created_at"], reverse=True)
     return result
 
 
