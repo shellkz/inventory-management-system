@@ -27,6 +27,7 @@ Base = declarative_base()
 class TransactionType(str, enum.Enum):
     IN = "in"
     OUT = "out"
+    STOCKTAKE = "stocktake"
 
 
 class Source(str, enum.Enum):
