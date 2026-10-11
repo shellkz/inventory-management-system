@@ -5,7 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .models import Inventory, StockTransaction, StockTransactionItem, TransactionType
-from .schemas import StockInRequest
+from .schemas import StockInRequest, StocktakeRequest
 
 
 class InsufficientStockError(Exception):
@@ -38,6 +38,36 @@ def process_stock_in(db: Session, payload: StockInRequest) -> StockTransaction:
     for item_id, delta in quantity_deltas.items():
         inventory = db.get(Inventory, item_id)
         inventory.quantity += delta
+
+    db.commit()
+    db.refresh(transaction)
+    return transaction
+
+
+def process_stocktake(db: Session, payload: StocktakeRequest) -> StockTransaction:
+    """情境1:一個物品固定一個儲存區,所以這次提交的candidate只跟payload.item_id
+    這一個目標物品比對。只數final_item_id等於目標物品的candidate,其他(例如誤入鏡頭
+    的其他物品)不列入計數,也不去動它們的庫存——這次盤點只確認目標物品的狀態。
+    """
+    counted = sum(1 for item in payload.items if item.final_item_id == payload.item_id)
+
+    transaction = StockTransaction(type=TransactionType.STOCKTAKE)
+    db.add(transaction)
+    db.flush()  # 取得 transaction.id
+
+    for item in payload.items:
+        db.add(
+            StockTransactionItem(
+                transaction_id=transaction.id,
+                source=item.source,
+                predicted_class=item.predicted_class,
+                final_item_id=item.final_item_id,
+                prediction_id=item.prediction_id,
+            )
+        )
+
+    inventory = db.get(Inventory, payload.item_id)
+    inventory.quantity = counted
 
     db.commit()
     db.refresh(transaction)
