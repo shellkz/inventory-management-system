@@ -92,16 +92,22 @@ def get_item_history(db: Session, item_id: int):
         .order_by(StockTransaction.created_at.desc())
         .all()
     )
-    return [
-        {
+    result = []
+    for r in rows:
+        entry = {
             "transaction_id": r.id,
             "type": r.type.value,
-            "quantity_change": r.count if r.type == TransactionType.IN else -r.count,
             "operator_id": r.operator_id,
             "created_at": r.created_at,
         }
-        for r in rows
-    ]
+        if r.type == TransactionType.IN:
+            entry["quantity_change"] = r.count
+        elif r.type == TransactionType.OUT:
+            entry["quantity_change"] = -r.count
+        else:  # STOCKTAKE:SET語意,顯示盤點後的絕對數量,不是變化量
+            entry["quantity_after"] = r.count
+        result.append(entry)
+    return result
 
 
 def process_stock_out(db: Session, payload: StockInRequest) -> StockTransaction:
