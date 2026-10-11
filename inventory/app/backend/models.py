@@ -27,6 +27,7 @@ Base = declarative_base()
 class TransactionType(str, enum.Enum):
     IN = "in"
     OUT = "out"
+    STOCKTAKE = "stocktake"
 
 
 class Source(str, enum.Enum):
@@ -78,6 +79,10 @@ class StockTransaction(Base):
     id = Column(Integer, primary_key=True)
     type = Column(_enum_values(TransactionType), nullable=False)
     operator_id = Column(String, nullable=True)
+    # 只有盤點(STOCKTAKE)會用到,記錄這次盤點真正宣告的目標物品,跟
+    # StockTransactionItem.final_item_id分開——盤點時誤入鏡頭的其他物品也會
+    # 寫進StockTransactionItem,但不代表它們是這次盤點的目標,查詢歷史時要靠這個欄位分清楚。
+    target_item_id = Column(Integer, ForeignKey("items.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 

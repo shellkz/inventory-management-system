@@ -34,3 +34,8 @@ class StockInItem(BaseModel):
 
 class StockInRequest(BaseModel):
     items: list[StockInItem]
+
+
+class StocktakeRequest(BaseModel):
+    item_id: int  # 這次盤點的目標物品,即使items是空清單也知道要把庫存SET成0
+    items: list[StockInItem]

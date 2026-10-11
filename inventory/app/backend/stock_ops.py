@@ -5,7 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .models import Inventory, StockTransaction, StockTransactionItem, TransactionType
-from .schemas import StockInRequest
+from .schemas import StockInRequest, StocktakeRequest
 
 
 class InsufficientStockError(Exception):
@@ -44,11 +44,49 @@ def process_stock_in(db: Session, payload: StockInRequest) -> StockTransaction:
     return transaction
 
 
-def get_item_history(db: Session, item_id: int):
-    """依transaction分組,算出每次入/出庫對這個item的數量變化。一次異動裡同個item
-    對應多筆StockTransactionItem(每筆代表一個單位),所以用count()合計成一個數字。
+def process_stocktake(db: Session, payload: StocktakeRequest) -> StockTransaction:
+    """情境1:一個物品固定一個儲存區,所以這次提交的candidate只跟payload.item_id
+    這一個目標物品比對。只數final_item_id等於目標物品的candidate,其他(例如誤入鏡頭
+    的其他物品)不列入計數,也不去動它們的庫存——這次盤點只確認目標物品的狀態。
     """
-    rows = (
+    counted = sum(1 for item in payload.items if item.final_item_id == payload.item_id)
+
+    transaction = StockTransaction(type=TransactionType.STOCKTAKE, target_item_id=payload.item_id)
+    db.add(transaction)
+    db.flush()  # 取得 transaction.id
+
+    for item in payload.items:
+        db.add(
+            StockTransactionItem(
+                transaction_id=transaction.id,
+                source=item.source,
+                predicted_class=item.predicted_class,
+                final_item_id=item.final_item_id,
+                prediction_id=item.prediction_id,
+            )
+        )
+
+    inventory = db.get(Inventory, payload.item_id)
+    inventory.quantity = counted
+
+    db.commit()
+    db.refresh(transaction)
+    return transaction
+
+
+def get_item_history(db: Session, item_id: int):
+    """依transaction分組,算出每次入/出庫/盤點對這個item的狀態。
+
+    入庫/出庫:每筆StockTransactionItem.final_item_id各自獨立成立,直接用它篩+算delta。
+
+    盤點不能用同一套篩法:目標物品記在StockTransaction.target_item_id,不是
+    final_item_id——盤點時誤入鏡頭、被改成別的item的candidate也會寫進
+    StockTransactionItem,不代表這個item被盤點了(否則會把這次盤點誤算進那個
+    不相關item的歷史)。而且盤到0個時,根本不會有任何final_item_id=item_id的明細,
+    用inner join只篩final_item_id會直接漏掉這筆,所以用target_item_id篩交易、
+    LEFT JOIN數符合final_item_id的筆數(可能是0)。
+    """
+    in_out_rows = (
         db.query(
             StockTransaction.id,
             StockTransaction.type,
@@ -58,20 +96,48 @@ def get_item_history(db: Session, item_id: int):
         )
         .join(StockTransactionItem, StockTransactionItem.transaction_id == StockTransaction.id)
         .filter(StockTransactionItem.final_item_id == item_id)
+        .filter(StockTransaction.type != TransactionType.STOCKTAKE)
         .group_by(StockTransaction.id)
-        .order_by(StockTransaction.created_at.desc())
         .all()
     )
-    return [
-        {
+
+    stocktake_rows = (
+        db.query(
+            StockTransaction.id,
+            StockTransaction.type,
+            StockTransaction.operator_id,
+            StockTransaction.created_at,
+            func.count(StockTransactionItem.id).label("count"),
+        )
+        .outerjoin(
+            StockTransactionItem,
+            (StockTransactionItem.transaction_id == StockTransaction.id)
+            & (StockTransactionItem.final_item_id == item_id),
+        )
+        .filter(StockTransaction.type == TransactionType.STOCKTAKE)
+        .filter(StockTransaction.target_item_id == item_id)
+        .group_by(StockTransaction.id)
+        .all()
+    )
+
+    result = []
+    for r in list(in_out_rows) + list(stocktake_rows):
+        entry = {
             "transaction_id": r.id,
             "type": r.type.value,
-            "quantity_change": r.count if r.type == TransactionType.IN else -r.count,
             "operator_id": r.operator_id,
             "created_at": r.created_at,
         }
-        for r in rows
-    ]
+        if r.type == TransactionType.IN:
+            entry["quantity_change"] = r.count
+        elif r.type == TransactionType.OUT:
+            entry["quantity_change"] = -r.count
+        else:  # STOCKTAKE:SET語意,顯示盤點後的絕對數量,不是變化量
+            entry["quantity_after"] = r.count
+        result.append(entry)
+
+    result.sort(key=lambda e: e["created_at"], reverse=True)
+    return result
 
 
 def process_stock_out(db: Session, payload: StockInRequest) -> StockTransaction:
