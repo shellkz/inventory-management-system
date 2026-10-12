@@ -3,17 +3,17 @@ from flask import Blueprint, Response, jsonify, make_response, render_template, 
 from pydantic import ValidationError
 from sqlalchemy import select
 
-from .. import vision_client
-from ..db import get_db
-from ..models import Inventory, Item
-from ..schemas import ItemCreate, ItemUpdate, SampleBboxPatch
-from ..stock_ops import get_item_history
+from ... import vision_client
+from ...db import get_db
+from ...models import Inventory, Item
+from ...schemas import ItemCreate, ItemUpdate, SampleBboxPatch
+from ...stock_ops import get_item_history
 
 bp = Blueprint(
     "items",
     __name__,
-    static_folder="../../frontend/pages/items",
-    static_url_path="/items/assets",
+    static_folder="static",
+    static_url_path="/items/static",
 )
 
 

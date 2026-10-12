@@ -1,15 +1,15 @@
 import requests
 from flask import Blueprint, jsonify, render_template, request
 
-from .. import vision_client
-from ..db import get_db
-from ..models import Item
+from ... import vision_client
+from ...db import get_db
+from ...models import Item
 
 bp = Blueprint(
     "recognize",
     __name__,
-    static_folder="../../frontend/pages/recognize",
-    static_url_path="/recognize/assets",
+    static_folder="static",
+    static_url_path="/recognize/static",
 )
 
 
