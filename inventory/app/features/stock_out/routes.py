@@ -2,16 +2,16 @@ import requests
 from flask import Blueprint, current_app, jsonify, render_template, request
 from pydantic import ValidationError
 
-from .. import vision_client
-from ..db import get_db
-from ..schemas import StockInRequest
-from ..stock_ops import InsufficientStockError, process_stock_out
+from ... import vision_client
+from ...db import get_db
+from ...schemas import StockInRequest
+from ...stock_ops import InsufficientStockError, process_stock_out
 
 bp = Blueprint(
     "stock_out",
     __name__,
-    static_folder="../../frontend/pages/stock_out",
-    static_url_path="/stock-out/assets",
+    static_folder="static",
+    static_url_path="/stock-out/static",
 )
 
 

@@ -2,16 +2,16 @@ import requests
 from flask import Blueprint, current_app, jsonify, render_template, request
 from pydantic import ValidationError
 
-from .. import vision_client
-from ..db import get_db
-from ..schemas import StockInRequest
-from ..stock_ops import process_stock_in
+from ... import vision_client
+from ...db import get_db
+from ...schemas import StockInRequest
+from ...stock_ops import process_stock_in
 
 bp = Blueprint(
     "stock_in",
     __name__,
-    static_folder="../../frontend/pages/stock_in",
-    static_url_path="/stock-in/assets",
+    static_folder="static",
+    static_url_path="/stock-in/static",
 )
 
 
