@@ -1,38 +1,29 @@
 import requests
-from flask import Blueprint, current_app, jsonify, render_template, request
+from flask import current_app, jsonify, request
 from pydantic import ValidationError
 
 from ... import vision_client
 from ...db import get_db
-from ...schemas import StockInRequest
-from ...stock_ops import process_stock_in
-
-bp = Blueprint(
-    "stock_in",
-    __name__,
-    static_folder="static",
-    static_url_path="/stock-in/static",
-)
+from ...schemas import StocktakeRequest
+from ...stock_ops import process_stocktake
+from .views import bp
 
 
-@bp.route("/stock-in", methods=["GET", "POST"])
-def stock_in():
-    if request.method == "GET":
-        return render_template("stock_in/page.html")
-
+@bp.route("/api/stocktake", methods=["POST"])
+def stocktake_create():
     body = request.get_json(silent=True)
     if body is None:
         return jsonify({"error": "invalid_json", "message": "request body 不是合法的 JSON"}), 400
 
     try:
-        payload = StockInRequest.model_validate(body)
+        payload = StocktakeRequest.model_validate(body)
     except ValidationError as e:
         return jsonify({"error": "validation_error", "details": e.errors()}), 422
 
     db = get_db()
-    transaction = process_stock_in(db, payload)
+    transaction = process_stocktake(db, payload)
 
-    # 把人工審核結果回饋給vision。失敗只記log,不影響這次入庫已經成功的事實。
+    # 把人工審核結果回饋給vision。失敗只記log,不影響這次盤點已經成功的事實。
     for item in payload.items:
         if item.prediction_id is None:
             continue

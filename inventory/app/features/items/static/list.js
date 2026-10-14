@@ -8,7 +8,7 @@
         return;
       }
 
-      const resp = await fetch(`/items/${itemId}`, { method: "DELETE" });
+      const resp = await fetch(`/api/items/${itemId}`, { method: "DELETE" });
 
       if (!resp.ok) {
         const data = await resp.json();

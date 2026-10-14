@@ -1,22 +1,16 @@
 from flask import Flask
-from jinja2 import ChoiceLoader, FileSystemLoader
 
 
 def create_app() -> Flask:
     app = Flask(__name__, static_folder="static")
 
-    # 模板分兩個根目錄:templates放共用的(base.html),
-    # features放各頁面自己的(跟該頁面的routes.py、static/放在一起),兩邊都要能找到。
-    # 不能靠blueprint自己的template_folder,因為Flask是用同一個檔名在所有
-    # blueprint的資料夾裡依註冊順序找,不是只找「目前這個」blueprint的資料夾,
-    # 每個頁面都叫page.html會互相撞到,所以render_template一律用「資料夾/檔名」
-    # 的完整相對路徑呼叫,確保字串全域唯一。
-    app.jinja_loader = ChoiceLoader(
-        [
-            FileSystemLoader(f"{app.root_path}/templates"),
-            FileSystemLoader(f"{app.root_path}/features"),
-        ]
-    )
+    # 共用的 base.html 放 app 自己的 template_folder(預設就是 templates/)。
+    # 每個 blueprint 自己宣告 template_folder,Flask 內建的 DispatchingJinjaLoader
+    # 會自動把 app 跟所有已註冊 blueprint 的 loader 一起排進查找鏈,不用手動組
+    # ChoiceLoader。但 DispatchingJinjaLoader 是依註冊順序逐個 loader 找,不是只找
+    # 「目前這個」blueprint 的資料夾,所以每個 blueprint 的 template_folder 底下
+    # 還是要多包一層跟 blueprint 同名的子資料夾(例如 items/templates/items/xxx.html),
+    # render_template 用「資料夾/檔名」的完整相對路徑呼叫,確保字串全域唯一。
 
     from .db import close_db
 

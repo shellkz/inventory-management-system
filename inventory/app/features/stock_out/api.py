@@ -1,38 +1,32 @@
 import requests
-from flask import Blueprint, current_app, jsonify, render_template, request
+from flask import current_app, jsonify, request
 from pydantic import ValidationError
 
 from ... import vision_client
 from ...db import get_db
-from ...schemas import StocktakeRequest
-from ...stock_ops import process_stocktake
-
-bp = Blueprint(
-    "stocktake",
-    __name__,
-    static_folder="static",
-    static_url_path="/stocktake/static",
-)
+from ...schemas import StockInRequest
+from ...stock_ops import InsufficientStockError, process_stock_out
+from .views import bp
 
 
-@bp.route("/stocktake", methods=["GET", "POST"])
-def stocktake():
-    if request.method == "GET":
-        return render_template("stocktake/page.html")
-
+@bp.route("/api/stock-out", methods=["POST"])
+def stock_out_create():
     body = request.get_json(silent=True)
     if body is None:
         return jsonify({"error": "invalid_json", "message": "request body 不是合法的 JSON"}), 400
 
     try:
-        payload = StocktakeRequest.model_validate(body)
+        payload = StockInRequest.model_validate(body)
     except ValidationError as e:
         return jsonify({"error": "validation_error", "details": e.errors()}), 422
 
     db = get_db()
-    transaction = process_stocktake(db, payload)
+    try:
+        transaction = process_stock_out(db, payload)
+    except InsufficientStockError as e:
+        return jsonify({"error": "insufficient_stock", "shortages": e.shortages}), 422
 
-    # 把人工審核結果回饋給vision。失敗只記log,不影響這次盤點已經成功的事實。
+    # 把人工審核結果回饋給vision。失敗只記log,不影響這次出庫已經成功的事實。
     for item in payload.items:
         if item.prediction_id is None:
             continue

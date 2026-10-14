@@ -1,6 +1,7 @@
 (function () {
   const photos = [];
 
+  const form = document.getElementById("add-item-form");
   const photoList = document.getElementById("photo-list");
   const addBtn = document.getElementById("add-photo-btn");
   const cameraInput = document.getElementById("camera-input");
@@ -22,7 +23,7 @@
   }
 
   // 讓 photos 陣列的內容同步回一個真正的 <input type="file" multiple>,
-  // 之後表單提交(htmx)才能正確送出這些檔案。
+  // 送出表單時才能正確帶上這些檔案。
   function syncInput() {
     const dt = new DataTransfer();
     for (const file of photos) {
@@ -61,4 +62,21 @@
 
     syncInput();
   }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const resp = await fetch("/api/items", {
+      method: "POST",
+      body: new FormData(form),
+    });
+
+    if (!resp.ok) {
+      const data = await resp.json();
+      alert(`新增失敗: ${data.message || resp.status}`);
+      return;
+    }
+
+    location.href = "/items";
+  });
 })();

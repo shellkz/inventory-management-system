@@ -1,23 +1,14 @@
 import requests
-from flask import Blueprint, jsonify, render_template, request
+from flask import jsonify, request
 
 from ... import vision_client
 from ...db import get_db
 from ...models import Item
-
-bp = Blueprint(
-    "recognize",
-    __name__,
-    static_folder="static",
-    static_url_path="/recognize/static",
-)
+from .views import bp
 
 
-@bp.route("/recognize", methods=["GET", "POST"])
-def recognize():
-    if request.method == "GET":
-        return render_template("recognize/page.html")
-
+@bp.route("/api/recognize", methods=["POST"])
+def recognize_create():
     image = request.files["image"]
     try:
         data = vision_client.recognize(image)
