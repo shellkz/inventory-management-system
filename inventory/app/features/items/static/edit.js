@@ -6,7 +6,7 @@
   saveBtn.addEventListener("click", async () => {
     const itemId = saveBtn.dataset.itemId;
 
-    const resp = await fetch(`/items/edit/${itemId}`, {
+    const resp = await fetch(`/api/items/${itemId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: nameInput.value, min_stock: Number(minStockInput.value) }),
@@ -25,7 +25,7 @@
     const container = document.getElementById("samples");
     const itemId = container.dataset.itemId;
 
-    const resp = await fetch(`/items/edit/${itemId}/samples`);
+    const resp = await fetch(`/api/items/${itemId}/samples`);
     const samples = await resp.json();
 
     container.innerHTML = "";
@@ -42,7 +42,7 @@
     photo.className = "sample-photo";
 
     const img = document.createElement("img");
-    img.src = `/items/edit/${itemId}/samples/${sample.id}/image`;
+    img.src = `/api/items/${itemId}/samples/${sample.id}/image`;
 
     const box = document.createElement("div");
     box.className = "sample-bbox";
@@ -139,7 +139,7 @@
   }
 
   async function confirmEdit(itemId, sampleId, bbox) {
-    const resp = await fetch(`/items/edit/${itemId}/samples/${sampleId}`, {
+    const resp = await fetch(`/api/items/${itemId}/samples/${sampleId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ bbox }),
@@ -155,7 +155,7 @@
   }
 
   async function deleteSample(itemId, sampleId) {
-    const resp = await fetch(`/items/edit/${itemId}/samples/${sampleId}`, {
+    const resp = await fetch(`/api/items/${itemId}/samples/${sampleId}`, {
       method: "DELETE",
     });
 
@@ -184,7 +184,7 @@
     const formData = new FormData();
     formData.append("image", file);
 
-    const resp = await fetch(`/items/edit/${itemId}/samples`, {
+    const resp = await fetch(`/api/items/${itemId}/samples`, {
       method: "POST",
       body: formData,
     });

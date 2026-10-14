@@ -26,7 +26,7 @@
     const formData = new FormData();
     formData.append("image", file);
 
-    const resp = await fetch("/recognize", { method: "POST", body: formData });
+    const resp = await fetch("/api/recognize", { method: "POST", body: formData });
     const data = await resp.json();
     drawResults(data.result);
   }

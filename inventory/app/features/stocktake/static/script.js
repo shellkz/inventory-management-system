@@ -22,7 +22,7 @@
   const catalogPromise = loadCatalog();
 
   async function loadCatalog() {
-    const resp = await fetch("/items", { headers: { Accept: "application/json" } });
+    const resp = await fetch("/api/items");
     catalog = await resp.json();
     catalog.forEach((entry) => {
       const option = document.createElement("option");
@@ -76,7 +76,7 @@
     const formData = new FormData();
     formData.append("image", file);
 
-    const resp = await fetch("/recognize", { method: "POST", body: formData });
+    const resp = await fetch("/api/recognize", { method: "POST", body: formData });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.message || `HTTP ${resp.status}`);
 
@@ -399,7 +399,7 @@
     submitBtn.disabled = true;
 
     try {
-      const resp = await fetch("/stocktake", {
+      const resp = await fetch("/api/stocktake", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildSubmissionPayload()),

@@ -21,7 +21,7 @@
   const catalogPromise = loadCatalog();
 
   async function loadCatalog() {
-    const resp = await fetch("/items", { headers: { Accept: "application/json" } });
+    const resp = await fetch("/api/items");
     catalog = await resp.json();
   }
 
@@ -65,7 +65,7 @@
     const formData = new FormData();
     formData.append("image", file);
 
-    const resp = await fetch("/recognize", { method: "POST", body: formData });
+    const resp = await fetch("/api/recognize", { method: "POST", body: formData });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.message || `HTTP ${resp.status}`);
 
@@ -394,7 +394,7 @@
     submitBtn.disabled = true;
 
     try {
-      const resp = await fetch("/stock-out", {
+      const resp = await fetch("/api/stock-out", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildSubmissionPayload()),
