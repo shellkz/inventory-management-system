@@ -12,6 +12,7 @@ from ...stock_ops import get_item_history
 bp = Blueprint(
     "items",
     __name__,
+    template_folder="templates",
     static_folder="static",
     static_url_path="/items/static",
 )
@@ -26,13 +27,13 @@ def catalog():
         return jsonify(
             {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
         ), 502
-    return render_template("items/_catalog.html", entities=entities)
+    return render_template("items/catalog.html", entities=entities)
 
 
 @bp.route("/items/add", methods=["GET", "POST"])
 def add_item():
     if request.method == "GET":
-        return render_template("items/add/page.html")
+        return render_template("items/add.html")
 
     try:
         item_data = ItemCreate(
@@ -41,7 +42,7 @@ def add_item():
             min_stock=int(request.form.get("min_stock", 0)),
         )
     except (ValidationError, ValueError) as e:
-        return render_template("items/add/_error.html", message=str(e))
+        return render_template("items/add_error.html", message=str(e))
 
     try:
         entity = vision_client.create_entity(item_data.name)
@@ -53,7 +54,7 @@ def add_item():
         ]
         vision_client.create_instance(entity_id, files)
     except requests.RequestException as e:
-        return render_template("items/add/_error.html", message=f"辨識服務錯誤: {e}")
+        return render_template("items/add_error.html", message=f"辨識服務錯誤: {e}")
 
     db = get_db()
     item = Item(
@@ -125,7 +126,7 @@ def items():
 
     if is_json:
         return jsonify(items_view)
-    return render_template("items/page.html", items=items_view, include_deleted=include_deleted)
+    return render_template("items/list.html", items=items_view, include_deleted=include_deleted)
 
 
 @bp.route("/items/<int:item_id>", methods=["DELETE"])
@@ -171,7 +172,7 @@ def item_detail(item_id):
         return jsonify(
             {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
         ), 502
-    return render_template("items/edit/[id]/page.html", item=item, instances=instances)
+    return render_template("items/edit.html", item=item, instances=instances)
 
 
 @bp.route("/items/history/<int:item_id>")
@@ -179,7 +180,7 @@ def item_history(item_id):
     db = get_db()
     item = db.get(Item, item_id)
     history = get_item_history(db, item_id)
-    return render_template("items/history/[id]/page.html", item=item, history=history)
+    return render_template("items/history.html", item=item, history=history)
 
 
 @bp.route("/items/edit/<int:item_id>/samples", methods=["GET", "POST"])

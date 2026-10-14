@@ -10,6 +10,7 @@ from ...stock_ops import process_stock_in
 bp = Blueprint(
     "stock_in",
     __name__,
+    template_folder="templates",
     static_folder="static",
     static_url_path="/stock-in/static",
 )
