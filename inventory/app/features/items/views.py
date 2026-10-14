@@ -32,13 +32,19 @@ def add_item():
     except (ValidationError, ValueError) as e:
         return jsonify({"error": "validation_error", "message": str(e)}), 422
 
+    images = [f for f in request.files.getlist("images") if f.filename]
+    if not images:
+        return jsonify(
+            {"error": "validation_error", "message": "請至少上傳一張照片"}
+        ), 422
+
     try:
         entity = vision_client.create_entity(item_data.name)
         entity_id = entity["id"]
 
         files = [
             ("images", (image.filename, image.stream, image.mimetype))
-            for image in request.files.getlist("images")
+            for image in images
         ]
         vision_client.create_instance(entity_id, files)
     except requests.RequestException as e:
