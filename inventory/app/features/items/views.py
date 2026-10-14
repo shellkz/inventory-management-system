@@ -1,5 +1,5 @@
 import requests
-from flask import Blueprint, Response, jsonify, make_response, render_template, request, url_for
+from flask import Blueprint, Response, jsonify, render_template, request
 from pydantic import ValidationError
 from sqlalchemy import select
 
@@ -18,18 +18,6 @@ bp = Blueprint(
 )
 
 
-@bp.route("/catalog")
-def catalog():
-    """只回傳片段 HTML,給 htmx 掛進頁面用,不是獨立頁面。"""
-    try:
-        entities = vision_client.get_entities()
-    except requests.RequestException as e:
-        return jsonify(
-            {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
-        ), 502
-    return render_template("items/catalog.html", entities=entities)
-
-
 @bp.route("/items/add", methods=["GET", "POST"])
 def add_item():
     if request.method == "GET":
@@ -42,7 +30,7 @@ def add_item():
             min_stock=int(request.form.get("min_stock", 0)),
         )
     except (ValidationError, ValueError) as e:
-        return render_template("items/add_error.html", message=str(e))
+        return jsonify({"error": "validation_error", "message": str(e)}), 422
 
     try:
         entity = vision_client.create_entity(item_data.name)
@@ -54,7 +42,9 @@ def add_item():
         ]
         vision_client.create_instance(entity_id, files)
     except requests.RequestException as e:
-        return render_template("items/add_error.html", message=f"辨識服務錯誤: {e}")
+        return jsonify(
+            {"error": "vision_service_error", "message": f"辨識服務錯誤: {e}"}
+        ), 502
 
     db = get_db()
     item = Item(
@@ -68,9 +58,7 @@ def add_item():
     db.add(Inventory(item_id=item.id, quantity=0))
     db.commit()
 
-    response = make_response("")
-    response.headers["HX-Redirect"] = url_for("items.items")
-    return response
+    return jsonify({"id": item.id}), 201
 
 
 @bp.route("/items")

@@ -5,14 +5,7 @@
 {% block content %}
   <h1>新增物品</h1>
 
-  <form
-    id="add-item-form"
-    class="form"
-    hx-post="/items/add"
-    hx-encoding="multipart/form-data"
-    hx-target="#add-item-result"
-    hx-swap="innerHTML"
-  >
+  <form id="add-item-form" class="form">
     <div class="field">
       <label for="name">名稱</label>
       <input type="text" id="name" name="name" required>
@@ -36,8 +29,6 @@
 
     <button type="submit" class="btn btn-primary">新增</button>
   </form>
-
-  <div id="add-item-result"></div>
 
   <script src="{{ url_for('items.static', filename='add.js') }}"></script>
 {% endblock %}
