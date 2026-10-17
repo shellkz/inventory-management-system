@@ -1,0 +1,2 @@
+streams:
+  cam1: rtsp://${CAM1_USER}:${CAM1_PASS}@${CAM1_IP}:554/${CAM1_PATH}
