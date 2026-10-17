@@ -21,3 +21,13 @@ services:
     volumes:
       - ./models:/app/models
       - ./vision_data:/app/data
+
+  go2rtc:
+    image: alexxit/go2rtc
+    environment:
+      - CAM1_USER=${CAM1_USER}
+      - CAM1_PASS=${CAM1_PASS}
+      - CAM1_IP=${CAM1_IP}
+      - CAM1_PATH=${CAM1_PATH}
+    volumes:
+      - ./go2rtc/go2rtc.yaml:/config/go2rtc.yaml
